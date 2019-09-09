@@ -1895,7 +1895,7 @@ static struct _osc_expr_rec osc_expr_funcsym[] __attribute__((unused)) = {
 	{"delete",
 	 "/result = delete($1)",
 	 1,
-	 0,
+	 -1,
 	 (char *[]){"OSC address to be deleted"},
 	 (int []){OSC_EXPR_ARG_TYPE_OSCADDRESS},
 	 (char *[]){NULL},
