@@ -198,6 +198,26 @@ void osc_expr_rec_setOptionalArgs(t_osc_expr_rec *r,
 			     &(r->optional_args_types));
 }
 
+void osc_expr_rec_setRequiredArgsPtr(t_osc_expr_rec *r,
+				  int num_required_args,
+				  char **required_args_names,
+				  int *required_args_types)
+{
+	r->num_required_args = num_required_args;
+	r->required_args_names = required_args_names;
+	r->required_args_types = required_args_types;
+}
+
+void osc_expr_rec_setOptionalArgsPtr(t_osc_expr_rec *r,
+				  int num_optional_args,
+				  char **optional_args_names,
+				  int *optional_args_types)
+{
+	r->num_optional_args = num_optional_args;
+	r->optional_args_names = optional_args_names;
+	r->optional_args_types = optional_args_types;
+}
+
 void osc_expr_rec_setFunction(t_osc_expr_rec *r,
 			      t_osc_expr_funcptr function)
 {

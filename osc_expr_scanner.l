@@ -200,7 +200,7 @@ quote[[:space:]]*\( {
 <quote>\" {
 	BEGIN(0);
 	if(*buf){
-		t_osc_atom_u *a = osc_atom_u_alloc();
+		//t_osc_atom_u *a = osc_atom_u_alloc();
 		//osc_atom_u_setStringPtr(a, *buf);
 		//osc_atom_u_setShouldFreePtr(a, 1);
 		yylval->atom = osc_atom_u_allocWithString(*buf);
@@ -286,7 +286,11 @@ quote[[:space:]]*\( {
 					}
 lambda				{
 						return OSC_EXPR_LAMBDA;
-					}
+				}
+
+let				{
+						return OSC_EXPR_LET;
+				}
 
 \/[^.\+\-\*%\^!=\[\]:;,\?<>\&\|\\\{\}\(\) \n\t`]+  {
 						if(alloc_atom){
@@ -294,7 +298,9 @@ lambda				{
 						}
 						osc_atom_u_setString(yylval->atom, yytext);
 						return OSC_EXPR_OSCADDRESS;
-				 	}
+				}
+
+
 
 [^\'\"0-9\+\-\*\/%\^!=\[\]:;,\?<>\&\|\\\{\}\(\) \n\t`.][^\'\"\+\-\*\/%\^!=\[\]:;,\?<>\&\|\\\{\}\(\) \n\t`.]* {
 						if(alloc_atom){

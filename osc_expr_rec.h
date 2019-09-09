@@ -48,6 +48,14 @@ void osc_expr_rec_setOptionalArgs(t_osc_expr_rec *r,
 	int num_optional_args,
 	char **optional_args_names,
 	int *optional_args_types);
+void osc_expr_rec_setRequiredArgsPtr(t_osc_expr_rec *r,
+	int num_required_args,
+	char **required_args_names,
+	int *required_args_types);
+void osc_expr_rec_setOptionalArgsPtr(t_osc_expr_rec *r,
+	int num_optional_args,
+	char **optional_args_names,
+	int *optional_args_types);
 void osc_expr_rec_setFunction(t_osc_expr_rec *r,
 	t_osc_expr_funcptr function);
 void osc_expr_rec_setExtra(t_osc_expr_rec *r, void *extra);

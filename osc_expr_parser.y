@@ -557,13 +557,82 @@ t_osc_expr *osc_expr_parser_reduce_NullCoalescingOperator(void *context, YYLTYPE
 	return osc_expr_parser_reduce_PrefixFunction(context, llocp, input_string, "if", arg1);
 }
 
-%}
+t_osc_expr_rec *osc_expr_parser_reduce_Lambda(void *context, YYLTYPE *llocp,
+					      char *input_string,
+					      t_osc_atom_u *parameters,
+					      t_osc_expr_arg *args)
+{
+	int nparams = 0;
+	t_osc_atom_u *p = parameters;
+	while(p){
+		nparams++;
+		p = p->next;
+	}
+	char **required_args = NULL;
+	if(nparams){
+		required_args = (char **)osc_mem_alloc(nparams * sizeof(char *));
+		p = parameters;
+		for(int i = 0; i < nparams; i++){
+			required_args[i] = NULL;
+			osc_util_strdup(required_args + i, osc_atom_u_getStringPtr(p));
+			t_osc_atom_u *killme = p;
+			p = p->next;
+			osc_atom_u_free(killme);
+		}
+	}
+	t_osc_expr_rec *lambda = osc_expr_rec_alloc();
+	osc_expr_rec_setName(lambda, "lambda");
+	osc_expr_rec_setRequiredArgsPtr(lambda, nparams, required_args, NULL);
+	osc_expr_rec_setFunction(lambda, osc_expr_lambda);
+	t_osc_expr_arg *a = args;
+	t_osc_expr *exprlist = NULL;
+	if(args){
+		if(osc_expr_arg_getType(a) == OSC_EXPR_ARG_TYPE_EXPR){
+			exprlist = osc_expr_arg_getExpr(a);
+			osc_expr_arg_setExpr(a, NULL);
+			t_osc_expr_arg *old = a;
+			a = osc_expr_arg_next(a);
+			osc_expr_arg_free(old);
+		}else{
+			t_osc_expr *e = osc_expr_alloc();
+			osc_expr_setRec(e, osc_expr_lookupFunction("prog1"));
+			t_osc_expr_arg *acpy = NULL;
+			osc_expr_arg_copy(&acpy, a);
+			osc_expr_prependArg(e, acpy);
+			osc_expr_arg_setExpr(a, NULL);
+			t_osc_expr_arg *old = a;
+			a = osc_expr_arg_next(a);
+			osc_expr_arg_free(old);
+			exprlist = e;
+		}
+		while(a){
+			if(osc_expr_arg_getType(a) == OSC_EXPR_ARG_TYPE_EXPR){
+				t_osc_expr *e = osc_expr_arg_getExpr(a);
+				osc_expr_appendExpr(exprlist, e);
+				osc_expr_arg_setExpr(a, NULL);
+				t_osc_expr_arg *old = a;
+				a = osc_expr_arg_next(a);
+				osc_expr_arg_free(old);
+			}else{
+				t_osc_expr *e = osc_expr_alloc();
+				osc_expr_setRec(e, osc_expr_lookupFunction("prog1"));
+				osc_expr_prependArg(e, a);
+				a = osc_expr_arg_next(a);
+				osc_expr_appendExpr(exprlist, e);
+			}
+		}
+	}
+	osc_expr_rec_setExtra(lambda, exprlist);
+	return lambda;
+}
+
+ %}
 
 %define api.pure full
 %locations
 %require "2.4.2"
 
-// replace this bullshit with a struct...
+ // replace this bullshit with a struct...
 %parse-param{t_osc_expr **exprstack}
 %parse-param{t_osc_expr **tmp_exprstack}
 %parse-param{t_osc_expr_rec **rec}
@@ -589,44 +658,44 @@ t_osc_expr *osc_expr_parser_reduce_NullCoalescingOperator(void *context, YYLTYPE
 	t_osc_expr_arg *arg;
 }
 
-%type <expr>expr bundle
+%type <expr>expr bundle lambda_bundle
 %type <func>function
-%type <arg>arg args msg msgs
+%type <arg>arg args msg msgs lambda_msg lambda_msgs
 %type <atom> OSC_EXPR_QUOTED_EXPR parameters parameter
-%nonassoc <atom>OSC_EXPR_NUM OSC_EXPR_STRING OSC_EXPR_OSCADDRESS OSC_EXPR_LAMBDA
+%nonassoc <atom>OSC_EXPR_NUM OSC_EXPR_STRING OSC_EXPR_OSCADDRESS OSC_EXPR_LAMBDA_PARAM OSC_EXPR_LAMBDA OSC_EXPR_LET
 
-// low to high precedence
-// adapted from http://en.wikipedia.org/wiki/Operators_in_C_and_C%2B%2B
+ // low to high precedence
+ // adapted from http://en.wikipedia.org/wiki/Operators_in_C_and_C%2B%2B
 
-// level 16
+ // level 16
 %right '=' OSC_EXPR_PLUSEQ OSC_EXPR_MINUSEQ OSC_EXPR_MULTEQ OSC_EXPR_DIVEQ OSC_EXPR_MODEQ OSC_EXPR_POWEQ
 
-// level 15
+ // level 15
 %right OSC_EXPR_TERNARY_COND '?' ':'
 
-// level 14
+ // level 14
 %left '|' OSC_EXPR_OROR
 
-// level 13
+ // level 13
 %left '&' OSC_EXPR_ANDAND
 
-// level 9
+ // level 9
 %left OSC_EXPR_EQ OSC_EXPR_NEQ
 
-// level 8
+ // level 8
 %left '<' '>' OSC_EXPR_LTE OSC_EXPR_GTE
 
-// level 6
+ // level 6
 %left '+' '-'
 
-// level 5
+ // level 5
 %left '*' '/' '%'
 %left '^'
 
-// level 3
+ // level 3
 %right OSC_EXPR_PREFIX_INC OSC_EXPR_PREFIX_DEC OSC_EXPR_UPLUS OSC_EXPR_UMINUS '!' OSC_EXPR_DBLQMARK OSC_EXPR_DBLQMARKEQ
 
-// level 2
+ // level 2
 %left OSC_EXPR_INC OSC_EXPR_DEC OSC_EXPR_FUNC_CALL OSC_EXPR_QUOTED_EXPR OPEN_DBL_BRKTS CLOSE_DBL_BRKTS '.'
 
 %token START_EXPNS START_FUNCTION
@@ -635,100 +704,65 @@ t_osc_expr *osc_expr_parser_reduce_NullCoalescingOperator(void *context, YYLTYPE
 %%
 
 start: START_EXPNS expns
-       | START_FUNCTION function;
+| START_FUNCTION function;
 
 expns:  {
-		if(*tmp_exprstack){
-			if(*exprstack){
-				osc_expr_appendExpr(*exprstack, *tmp_exprstack);
-			}else{
-				*exprstack = *tmp_exprstack;
-			}
-			*tmp_exprstack = NULL;
-		}
- 	}
-//| expns ',' {;}// can this really ever happen?
-//| expns expr ',' {
-	| expr {
-		if(*tmp_exprstack){
-			osc_expr_appendExpr(*tmp_exprstack, $1);
+	if(*tmp_exprstack){
+		if(*exprstack){
+			osc_expr_appendExpr(*exprstack, *tmp_exprstack);
 		}else{
-			*tmp_exprstack = $1;
+			*exprstack = *tmp_exprstack;
 		}
-        }
-	| expns ',' expr  {
-		if(*tmp_exprstack){
-			osc_expr_appendExpr(*tmp_exprstack, $3);
-		}else{
-			*tmp_exprstack = $3;
-		}
- 	}
-    | expns ',' {
+		*tmp_exprstack = NULL;
+	}
+}
+| expr {
+	if(*tmp_exprstack){
+		osc_expr_appendExpr(*tmp_exprstack, $1);
+	}else{
+		*tmp_exprstack = $1;
+	}
+  }
+| expns ',' expr  {
+	if(*tmp_exprstack){
+		osc_expr_appendExpr(*tmp_exprstack, $3);
+	}else{
+		*tmp_exprstack = $3;
+	}
+  }
+| expns ',' {
         osc_expr_error(context, &yylloc, input_string, OSC_ERR_EXPPARSE, "trailing comma", NULL, NULL);
         return 1;
-    }
+  }
 ;
-/*
-number: OSC_EXPR_NUM
-	| '-' OSC_EXPR_NUM {
-		osc_atom_u_negate($2);
-		$$ = $2;
- 	}
-;
-*/
+
 args:   arg
-	| args ',' arg {
-		osc_expr_arg_append($$, $3);
- 	}
+| args ',' arg {
+	osc_expr_arg_append($$, $3);
+ }
 ;
 
 arg:    OSC_EXPR_NUM {
-		$$ = osc_expr_arg_alloc();
-		osc_expr_arg_setOSCAtom($$, $1);
- 	}
-	| OSC_EXPR_STRING {
-		$$ = osc_expr_arg_alloc();
-		osc_expr_arg_setOSCAtom($$, $1);
- 	}
-	| OSC_EXPR_OSCADDRESS {
-		$$ = osc_expr_arg_alloc();
-		char *st = osc_atom_u_getStringPtr($1);
-		int len = strlen(st) + 1;
-		char *buf = osc_mem_alloc(len);
-		memcpy(buf, st, len);
-		osc_expr_arg_setOSCAddress($$, buf);
-		osc_atom_u_free($1);
-  	}
-	| expr {
+	$$ = osc_expr_arg_alloc();
+	osc_expr_arg_setOSCAtom($$, $1);
+ }
+| OSC_EXPR_STRING {
+	$$ = osc_expr_arg_alloc();
+	osc_expr_arg_setOSCAtom($$, $1);
+  }
+| OSC_EXPR_OSCADDRESS {
+	$$ = osc_expr_arg_alloc();
+	char *st = osc_atom_u_getStringPtr($1);
+	int len = strlen(st) + 1;
+	char *buf = osc_mem_alloc(len);
+	memcpy(buf, st, len);
+	osc_expr_arg_setOSCAddress($$, buf);
+	osc_atom_u_free($1);
+  }
+| expr {
 		t_osc_expr *e = $1;
-		//t_osc_expr_arg *a = osc_expr_getArgs(e);
 		$$ = osc_expr_arg_alloc();
-		/*
-		int eval = 1;
-		while(a){
-			int type = osc_expr_arg_getType(a);
-			if(type == OSC_EXPR_ARG_TYPE_OSCADDRESS ||
-			   type == OSC_EXPR_ARG_TYPE_EXPR ||
-			   type == OSC_EXPR_ARG_TYPE_FUNCTION){
-				eval = 0;
-				break;
-			}
-			a = osc_expr_arg_next(a);
-		}
-		if(eval){
-			t_osc_atom_ar_u *res = NULL;
-			int ret = osc_expr_eval(e, NULL, NULL, &res);
-			if(ret){
-				osc_expr_arg_setExpr($$, e);
-			}else{
-				// assume that this is a special function like value() or bound() that
-				// needs an OSC bundle to return a value
-				osc_expr_arg_setList($$, res);
-			}
-		}else{
-		*/
-			osc_expr_arg_setExpr($$, e);
-			//}
+		osc_expr_arg_setExpr($$, e);
   	}
 	| function {
 		$$ = osc_expr_arg_alloc();
@@ -737,350 +771,29 @@ arg:    OSC_EXPR_NUM {
 ;
 
 function:
-//OSC_EXPR_LAMBDA '(' parameters ')' '{' expns '}' {
 	OSC_EXPR_LAMBDA '(' '[' parameters ']' ',' args ')' {
-		int n = 0;
-		t_osc_atom_u *a = $4;
-		while(a){
-			n++;
-			a = a->next;
-		}
-		char *params[n];
-		a = $4;
-		for(int i = n - 1; i >= 0; i--){
-			char *st = osc_atom_u_getStringPtr(a);
-			int len = strlen(st) + 1;
-			params[i] = (char *)osc_mem_alloc(len);
-			strncpy(params[i], st, len);
-			t_osc_atom_u *killme = a;
-			a = a->next;
-			osc_atom_u_free(killme);
-		}
-		t_osc_expr_rec *func = osc_expr_rec_alloc();
-		osc_expr_rec_setName(func, "lambda");
-		osc_expr_rec_setRequiredArgs(func, n, params, NULL);
-		for(int i = 0; i < n; i++){
-			if(params[i]){
-				osc_mem_free(params[i]);
-			}
-		}
-		/*
-		t_osc_expr *e = *tmp_exprstack;
-		while(e){
-			e = osc_expr_next(e);
-		}
-		*/
-		osc_expr_rec_setFunction(func, osc_expr_lambda);
-		t_osc_expr_arg *aaa = $7;
-		t_osc_expr *exprlist = NULL;
-		//t_osc_expr *exprlist = osc_expr_arg_getExpr(aaa);
-		if(osc_expr_arg_getType(aaa) == OSC_EXPR_ARG_TYPE_EXPR){
-			exprlist = osc_expr_arg_getExpr(aaa);
-			osc_expr_arg_setExpr(aaa, NULL);
-			t_osc_expr_arg *old = aaa;
-			aaa = osc_expr_arg_next(aaa);
-			osc_expr_arg_free(old);
-		}else{
-			t_osc_expr *e = osc_expr_alloc();
-			osc_expr_setRec(e, osc_expr_lookupFunction("prog1"));
-			t_osc_expr_arg *aaacpy = NULL;
-			osc_expr_arg_copy(&aaacpy, aaa);
-			osc_expr_prependArg(e, aaacpy);
-			osc_expr_arg_setExpr(aaa, NULL);
-			t_osc_expr_arg *old = aaa;
-			aaa = osc_expr_arg_next(aaa);
-			osc_expr_arg_free(old);
-			exprlist = e;
-		}
-
-		int i = 1;
-		while(aaa){
-			/*
-			if(osc_expr_arg_getType(aaa) != OSC_EXPR_ARG_TYPE_EXPR){
-				osc_expr_error(&yylloc, input_string, OSC_ERR_EXPPARSE, "arg %d of lambda expression is not an expression\n", i);
-				return 1;
-			}
-			*/
-			if(osc_expr_arg_getType(aaa) == OSC_EXPR_ARG_TYPE_EXPR){
-				t_osc_expr *e = osc_expr_arg_getExpr(aaa);
-				osc_expr_appendExpr(exprlist, e);
-				osc_expr_arg_setExpr(aaa, NULL);
-				t_osc_expr_arg *old = aaa;
-				aaa = osc_expr_arg_next(aaa);
-				osc_expr_arg_free(old);
-			}else{
-				t_osc_expr *e = osc_expr_alloc();
-				osc_expr_setRec(e, osc_expr_lookupFunction("prog1"));
-				osc_expr_prependArg(e, aaa);
-				aaa = osc_expr_arg_next(aaa);
-				osc_expr_appendExpr(exprlist, e);
-			}
-			/*
-			t_osc_expr *e = osc_expr_arg_getExpr(aaa);
-			osc_expr_appendExpr(exprlist, e);
-			osc_expr_arg_setExpr(aaa, NULL);
-			t_osc_expr_arg *old = aaa;
-			aaa = osc_expr_arg_next(aaa);
-			osc_expr_arg_free(old);
-			*/
-			i++;
-		}
-		osc_expr_rec_setExtra(func, exprlist);
-		//osc_expr_rec_setExtra(func, *tmp_exprstack);
+		t_osc_expr_rec *func = osc_expr_parser_reduce_Lambda(context, &yylloc, input_string, $4, $7);
 		$$ = func;
 		if(startcond == START_EXPNS){
-			//*tmp_exprstack = NULL;
 		}else if(startcond == START_FUNCTION){
 			*rec = func;
 		}
-// go through and make sure the parameters are unique
-/*
-		t_osc_expr_rec *r = osc_expr_lookupFunction("lambda");
-		t_osc_expr *e = osc_expr_alloc();
-		osc_expr_setRec(e, r);
-		t_osc_expr *expns_copy = NULL;
-		t_osc_expr *ee = $<expr>6;
-		while(ee){
-			t_osc_expr *copy = osc_expr_copy(ee);
-			if(expns_copy){
-				osc_expr_appendExpr(expns_copy, copy);
-			}else{
-				expns_copy = copy;
-			}
-			ee = osc_expr_next(ee);
-		}
-		t_osc_expr_arg *expns = osc_expr_arg_alloc();
-		osc_expr_arg_setExpr(expns, expns_copy);
-		osc_expr_arg_append($3, expns);
-		osc_expr_setArg(e, $3);
-*/
-//osc_expr_parser_bindParameters(&yylloc, input_string, e, $3, expns_copy);
-//$$ = e;
 	}
 	| OSC_EXPR_LAMBDA '(' parameter ',' args ')' {
-		int n = 0;
-		t_osc_atom_u *a = $3;
-		while(a){
-			n++;
-			a = a->next;
-		}
-		char *params[n];
-		a = $3;
-		for(int i = n - 1; i >= 0; i--){
-			char *st = osc_atom_u_getStringPtr(a);
-			int len = strlen(st) + 1;
-			params[i] = (char *)osc_mem_alloc(len);
-			strncpy(params[i], st, len);
-			t_osc_atom_u *killme = a;
-			a = a->next;
-			osc_atom_u_free(killme);
-		}
-		t_osc_expr_rec *func = osc_expr_rec_alloc();
-		osc_expr_rec_setName(func, "lambda");
-		osc_expr_rec_setRequiredArgs(func, n, params, NULL);
-		for(int i = 0; i < n; i++){
-			if(params[i]){
-				osc_mem_free(params[i]);
-			}
-		}
-		/*
-		t_osc_expr *e = *tmp_exprstack;
-		while(e){
-			e = osc_expr_next(e);
-		}
-		*/
-		osc_expr_rec_setFunction(func, osc_expr_lambda);
-		t_osc_expr_arg *aaa = $5;
-		//t_osc_expr *exprlist = osc_expr_arg_getExpr(aaa);
-		t_osc_expr *exprlist = NULL;
-		if(osc_expr_arg_getType(aaa) == OSC_EXPR_ARG_TYPE_EXPR){
-			exprlist = osc_expr_arg_getExpr(aaa);
-			osc_expr_arg_setExpr(aaa, NULL);
-			t_osc_expr_arg *old = aaa;
-			aaa = osc_expr_arg_next(aaa);
-			osc_expr_arg_free(old);
-		}else{
-			t_osc_expr *e = osc_expr_alloc();
-			osc_expr_setRec(e, osc_expr_lookupFunction("prog1"));
-			t_osc_expr_arg *aaacpy = NULL;
-			osc_expr_arg_copy(&aaacpy, aaa);
-			osc_expr_prependArg(e, aaacpy);
-			osc_expr_arg_setExpr(aaa, NULL);
-			t_osc_expr_arg *old = aaa;
-			aaa = osc_expr_arg_next(aaa);
-			osc_expr_arg_free(old);
-			exprlist = e;
-		}
-		int i = 1;
-		while(aaa){
-			/*
-			if(osc_expr_arg_getType(aaa) != OSC_EXPR_ARG_TYPE_EXPR){
-				osc_expr_error(&yylloc, input_string, OSC_ERR_EXPPARSE, "arg %d of lambda expression is not an expression\n", i);
-				return 1;
-			}
-			*/
-			if(osc_expr_arg_getType(aaa) == OSC_EXPR_ARG_TYPE_EXPR){
-				t_osc_expr *e = osc_expr_arg_getExpr(aaa);
-				osc_expr_appendExpr(exprlist, e);
-				osc_expr_arg_setExpr(aaa, NULL);
-				t_osc_expr_arg *old = aaa;
-				aaa = osc_expr_arg_next(aaa);
-				osc_expr_arg_free(old);
-			}else{
-				t_osc_expr *e = osc_expr_alloc();
-				osc_expr_setRec(e, osc_expr_lookupFunction("prog1"));
-				t_osc_expr_arg *aaacpy = NULL;
-				osc_expr_arg_copy(&aaacpy, aaa);
-				osc_expr_prependArg(e, aaacpy);
-				osc_expr_arg_setExpr(aaa, NULL);
-				t_osc_expr_arg *old = aaa;
-				aaa = osc_expr_arg_next(aaa);
-				osc_expr_arg_free(old);
-				osc_expr_appendExpr(exprlist, e);
-			}
-			/*
-			t_osc_expr *e = osc_expr_arg_getExpr(aaa);
-			osc_expr_appendExpr(exprlist, e);
-			osc_expr_arg_setExpr(aaa, NULL);
-			t_osc_expr_arg *old = aaa;
-			aaa = osc_expr_arg_next(aaa);
-			osc_expr_arg_free(old);
-			*/
-			i++;
-		}
-		osc_expr_rec_setExtra(func, exprlist);
-		//osc_expr_rec_setExtra(func, *tmp_exprstack);
+		t_osc_expr_rec *func = osc_expr_parser_reduce_Lambda(context, &yylloc, input_string, $3, $5);
 		$$ = func;
 		if(startcond == START_EXPNS){
-			//*tmp_exprstack = NULL;
 		}else if(startcond == START_FUNCTION){
 			*rec = func;
 		}
-// go through and make sure the parameters are unique
-/*
-		t_osc_expr_rec *r = osc_expr_lookupFunction("lambda");
-		t_osc_expr *e = osc_expr_alloc();
-		osc_expr_setRec(e, r);
-		t_osc_expr *expns_copy = NULL;
-		t_osc_expr *ee = $<expr>6;
-		while(ee){
-			t_osc_expr *copy = osc_expr_copy(ee);
-			if(expns_copy){
-				osc_expr_appendExpr(expns_copy, copy);
-			}else{
-				expns_copy = copy;
-			}
-			ee = osc_expr_next(ee);
-		}
-		t_osc_expr_arg *expns = osc_expr_arg_alloc();
-		osc_expr_arg_setExpr(expns, expns_copy);
-		osc_expr_arg_append($3, expns);
-		osc_expr_setArg(e, $3);
-*/
-//osc_expr_parser_bindParameters(&yylloc, input_string, e, $3, expns_copy);
-//$$ = e;
 	}
 	| OSC_EXPR_LAMBDA '(' '[' ']' ',' args ')' {
-		int n = 0;
-		t_osc_expr_rec *func = osc_expr_rec_alloc();
-		osc_expr_rec_setName(func, "lambda");
-		osc_expr_rec_setRequiredArgs(func, 0, NULL, NULL);
-		/*
-		t_osc_expr *e = *tmp_exprstack;
-		while(e){
-			e = osc_expr_next(e);
-		}
-		*/
-		osc_expr_rec_setFunction(func, osc_expr_lambda);
-		t_osc_expr_arg *aaa = $6;
-		//t_osc_expr *exprlist = osc_expr_arg_getExpr(aaa);
-		t_osc_expr *exprlist = NULL;
-		if(osc_expr_arg_getType(aaa) == OSC_EXPR_ARG_TYPE_EXPR){
-			exprlist = osc_expr_arg_getExpr(aaa);
-			osc_expr_arg_setExpr(aaa, NULL);
-			t_osc_expr_arg *old = aaa;
-			aaa = osc_expr_arg_next(aaa);
-			osc_expr_arg_free(old);
-		}else{
-			t_osc_expr *e = osc_expr_alloc();
-			osc_expr_setRec(e, osc_expr_lookupFunction("prog1"));
-			t_osc_expr_arg *aaacpy = NULL;
-			osc_expr_arg_copy(&aaacpy, aaa);
-			osc_expr_prependArg(e, aaacpy);
-			osc_expr_arg_setExpr(aaa, NULL);
-			t_osc_expr_arg *old = aaa;
-			aaa = osc_expr_arg_next(aaa);
-			osc_expr_arg_free(old);
-			exprlist = e;
-		}
-		int i = 1;
-		while(aaa){
-			/*
-			if(osc_expr_arg_getType(aaa) != OSC_EXPR_ARG_TYPE_EXPR){
-				osc_expr_error(&yylloc, input_string, OSC_ERR_EXPPARSE, "arg %d of lambda expression is not an expression\n", i);
-				return 1;
-			}
-			*/
-			if(osc_expr_arg_getType(aaa) == OSC_EXPR_ARG_TYPE_EXPR){
-				t_osc_expr *e = osc_expr_arg_getExpr(aaa);
-				osc_expr_appendExpr(exprlist, e);
-				osc_expr_arg_setExpr(aaa, NULL);
-				t_osc_expr_arg *old = aaa;
-				aaa = osc_expr_arg_next(aaa);
-				osc_expr_arg_free(old);
-			}else{
-				t_osc_expr *e = osc_expr_alloc();
-				osc_expr_setRec(e, osc_expr_lookupFunction("prog1"));
-				t_osc_expr_arg *aaacpy = NULL;
-				osc_expr_arg_copy(&aaacpy, aaa);
-				osc_expr_prependArg(e, aaacpy);
-				osc_expr_arg_setExpr(aaa, NULL);
-				t_osc_expr_arg *old = aaa;
-				aaa = osc_expr_arg_next(aaa);
-				osc_expr_arg_free(old);
-				osc_expr_appendExpr(exprlist, e);
-			}
-			/*
-			t_osc_expr *e = osc_expr_arg_getExpr(aaa);
-			osc_expr_appendExpr(exprlist, e);
-			osc_expr_arg_setExpr(aaa, NULL);
-			t_osc_expr_arg *old = aaa;
-			aaa = osc_expr_arg_next(aaa);
-			osc_expr_arg_free(old);
-			*/
-			i++;
-		}
-		osc_expr_rec_setExtra(func, exprlist);
-		//osc_expr_rec_setExtra(func, *tmp_exprstack);
+		t_osc_expr_rec *func = osc_expr_parser_reduce_Lambda(context, &yylloc, input_string, NULL, $6);
 		$$ = func;
 		if(startcond == START_EXPNS){
-			//*tmp_exprstack = NULL;
 		}else if(startcond == START_FUNCTION){
 			*rec = func;
 		}
-// go through and make sure the parameters are unique
-/*
-		t_osc_expr_rec *r = osc_expr_lookupFunction("lambda");
-		t_osc_expr *e = osc_expr_alloc();
-		osc_expr_setRec(e, r);
-		t_osc_expr *expns_copy = NULL;
-		t_osc_expr *ee = $<expr>6;
-		while(ee){
-			t_osc_expr *copy = osc_expr_copy(ee);
-			if(expns_copy){
-				osc_expr_appendExpr(expns_copy, copy);
-			}else{
-				expns_copy = copy;
-			}
-			ee = osc_expr_next(ee);
-		}
-		t_osc_expr_arg *expns = osc_expr_arg_alloc();
-		osc_expr_arg_setExpr(expns, expns_copy);
-		osc_expr_arg_append($3, expns);
-		osc_expr_setArg(e, $3);
-*/
-//osc_expr_parser_bindParameters(&yylloc, input_string, e, $3, expns_copy);
-//$$ = e;
 	}
 ;
 
@@ -1088,27 +801,10 @@ parameters: parameter
 	| parameters ',' parameter {
 		$3->next = $1;
 		$$ = $3;
- 	}
-;
-
-parameter: OSC_EXPR_STRING {
-		if(osc_atom_u_getTypetag($1) == 's'){
-			char *st = osc_atom_u_getStringPtr($1);
-			if(st){
-				if(*st == '/' && st[1] != '\0'){
-					// this is an OSC address
-					//error
-				}else{
-					$$ = $1;
-				}
-			}else{
-				//error
-			}
-		}else{
-			//error
-		}
 	}
 ;
+
+parameter: OSC_EXPR_STRING;
 
 msg:
 	OSC_EXPR_OSCADDRESS ':' arg {
@@ -1128,18 +824,78 @@ msgs: msg
 		$$ = $1;
 	}
 
+lambda_msg:
+	OSC_EXPR_STRING ':' arg {
+		t_osc_expr_arg *a = osc_expr_arg_alloc();
+		// long len = osc_atom_u_getStringLen($1);
+		// char *buf = NULL;
+		// osc_atom_u_getString($1, len, &buf);
+		// osc_expr_arg_setString(a, buf);
+		osc_expr_arg_setOSCAtom(a, $1);
+		osc_expr_arg_append(a, $3);
+		$$ = a;
+		//osc_atom_u_free($1);
+	  }
+;
+lambda_msgs: lambda_msg
+	| lambda_msgs ',' lambda_msg {
+		osc_expr_arg_append($1, $3);
+		$$ = $1;
+	}
+
 bundle: '{' '}' {
 		$$ = osc_expr_parser_reduce_PrefixFunction(context, &yylloc, input_string, "bundle", NULL);
 	  }
 	| '{' msgs '}' {
 		$$ = osc_expr_parser_reduce_PrefixFunction(context, &yylloc, input_string, "bundle", $2);
 	  }
+;
+
+lambda_bundle: '{' lambda_msgs '}' {
+		$$ = osc_expr_parser_reduce_PrefixFunction(context, &yylloc, input_string, "bundle", $2);
+	  }
+;
 
 expr:
 	'(' expr ')' {
 		$$ = $2;
   	}
 	| bundle
+	| OSC_EXPR_LET '(' lambda_bundle ',' args ')' {
+		//t_osc_expr_rec *r = osc_expr_getRec($3);
+		t_osc_expr_arg *bundle_fn_args = osc_expr_getArgs($3);
+		t_osc_atom_u *params = osc_atom_u_copy(osc_expr_arg_getOSCAtom(bundle_fn_args));
+		t_osc_expr_arg *killme = bundle_fn_args;
+		bundle_fn_args = osc_expr_arg_next(bundle_fn_args);
+		osc_expr_arg_free(killme);
+		t_osc_expr_arg *a = bundle_fn_args;
+		bundle_fn_args = osc_expr_arg_next(bundle_fn_args);
+		t_osc_expr_arg *args = a;
+		osc_expr_arg_setNext(a, NULL);
+		// osc_expr_arg_setOSCAtom(killme, NULL);
+		
+		// osc_expr_arg_setOSCAtom(bundle_fn_args, NULL);
+		// osc_expr_arg_free(bundle_fn_args);
+		//bundle_fn_args = osc_expr_arg_next(args);
+		int i = 0;
+		while(bundle_fn_args){
+			osc_atom_u_append(params, osc_atom_u_copy(osc_expr_arg_getOSCAtom(bundle_fn_args)));
+			killme = bundle_fn_args;
+			bundle_fn_args = osc_expr_arg_next(bundle_fn_args);
+			osc_expr_arg_free(killme);
+			a = bundle_fn_args;
+			bundle_fn_args = osc_expr_arg_next(bundle_fn_args);
+			osc_expr_arg_append(args, a);
+			osc_expr_arg_setNext(a, NULL);
+			i++;
+		}
+		t_osc_expr_rec *lambda = osc_expr_parser_reduce_Lambda(context, &yylloc, input_string, params, $5);
+		t_osc_expr_arg *lambda_arg = osc_expr_arg_alloc();
+		osc_expr_arg_setFunction(lambda_arg, lambda);
+		osc_expr_arg_setNext(lambda_arg, args);
+		t_osc_expr *apply = osc_expr_parser_reduce_PrefixFunction(context, &yylloc, input_string, "apply", lambda_arg);
+		$$ = apply;
+	  }
 // prefix function call
 	| OSC_EXPR_STRING '(' args ')' %prec OSC_EXPR_FUNC_CALL {
 		t_osc_expr *e = osc_expr_parser_reduce_PrefixFunction(context, &yylloc,
