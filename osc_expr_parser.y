@@ -862,32 +862,27 @@ expr:
   	}
 	| bundle
 	| OSC_EXPR_LET '(' lambda_bundle ',' args ')' {
-		//t_osc_expr_rec *r = osc_expr_getRec($3);
 		t_osc_expr_arg *bundle_fn_args = osc_expr_getArgs($3);
 		t_osc_atom_u *params = osc_atom_u_copy(osc_expr_arg_getOSCAtom(bundle_fn_args));
-		t_osc_expr_arg *killme = bundle_fn_args;
+		//t_osc_expr_arg *killme = bundle_fn_args;
 		bundle_fn_args = osc_expr_arg_next(bundle_fn_args);
-		osc_expr_arg_free(killme);
-		t_osc_expr_arg *a = bundle_fn_args;
-		bundle_fn_args = osc_expr_arg_next(bundle_fn_args);
+		//osc_expr_arg_free(killme);
+		t_osc_expr_arg *a = NULL;
+		osc_expr_arg_copy(&a, bundle_fn_args);
 		t_osc_expr_arg *args = a;
-		osc_expr_arg_setNext(a, NULL);
-		// osc_expr_arg_setOSCAtom(killme, NULL);
-		
-		// osc_expr_arg_setOSCAtom(bundle_fn_args, NULL);
-		// osc_expr_arg_free(bundle_fn_args);
-		//bundle_fn_args = osc_expr_arg_next(args);
-		int i = 0;
+		bundle_fn_args = osc_expr_arg_next(bundle_fn_args);
+		//osc_expr_arg_setNext(a, NULL);
 		while(bundle_fn_args){
 			osc_atom_u_append(params, osc_atom_u_copy(osc_expr_arg_getOSCAtom(bundle_fn_args)));
-			killme = bundle_fn_args;
+			//killme = bundle_fn_args;
 			bundle_fn_args = osc_expr_arg_next(bundle_fn_args);
-			osc_expr_arg_free(killme);
-			a = bundle_fn_args;
+			//osc_expr_arg_free(killme);
+			//a = bundle_fn_args;
+			a = NULL;
+			osc_expr_arg_copy(&a, bundle_fn_args);
 			bundle_fn_args = osc_expr_arg_next(bundle_fn_args);
 			osc_expr_arg_append(args, a);
-			osc_expr_arg_setNext(a, NULL);
-			i++;
+			//osc_expr_arg_setNext(a, NULL);
 		}
 		t_osc_expr_rec *lambda = osc_expr_parser_reduce_Lambda(context, &yylloc, input_string, params, $5);
 		t_osc_expr_arg *lambda_arg = osc_expr_arg_alloc();
@@ -895,6 +890,7 @@ expr:
 		osc_expr_arg_setNext(lambda_arg, args);
 		t_osc_expr *apply = osc_expr_parser_reduce_PrefixFunction(context, &yylloc, input_string, "apply", lambda_arg);
 		$$ = apply;
+		osc_expr_free($3);
 	  }
 // prefix function call
 	| OSC_EXPR_STRING '(' args ')' %prec OSC_EXPR_FUNC_CALL {

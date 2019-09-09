@@ -277,7 +277,7 @@ int osc_expr_evalInLexEnv(t_osc_expr *f,
 		}
 		for(i = 0; i < f_argc; i++){
 			if(argv[i]){
-				//osc_atom_array_u_free(argv[i]);
+				osc_atom_array_u_free(argv[i]);
 			}
 		}
 		return ret;
