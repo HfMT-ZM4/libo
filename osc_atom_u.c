@@ -107,10 +107,10 @@ t_osc_atom_u *osc_atom_u_copy(t_osc_atom_u *src)
 	return dest;
 }
 
-void osc_atom_u_setShouldFreePtr(t_osc_atom_u *a, int bool)
+void osc_atom_u_setShouldFreePtr(t_osc_atom_u *a, int bool_)
 {
 	if(a){
-		a->alloc = bool;
+		a->alloc = bool_;
 	}
 }
 
