@@ -662,7 +662,7 @@ t_osc_expr_rec *osc_expr_parser_reduce_Lambda(void *context, YYLTYPE *llocp,
 %type <func>function
 %type <arg>arg args msg msgs lambda_msg lambda_msgs
 %type <atom> OSC_EXPR_QUOTED_EXPR parameters parameter
-%nonassoc <atom>OSC_EXPR_NUM OSC_EXPR_STRING OSC_EXPR_OSCADDRESS OSC_EXPR_LAMBDA_PARAM OSC_EXPR_LAMBDA OSC_EXPR_LET
+%nonassoc <atom>OSC_EXPR_NUM OSC_EXPR_STRING OSC_EXPR_OSCADDRESS OSC_EXPR_LAMBDA_PARAM OSC_EXPR_LAMBDA OSC_EXPR_LET OSC_EXPR_COND
 
  // low to high precedence
  // adapted from http://en.wikipedia.org/wiki/Operators_in_C_and_C%2B%2B
@@ -950,6 +950,83 @@ expr:
 		osc_expr_setArg(e, a);
 		osc_atom_u_free($1);
 		$$ = e;
+	}
+	| OSC_EXPR_COND '(' args ')' %prec OSC_EXPR_FUNC_CALL {
+        t_osc_expr_arg *argPtr = $3;
+        
+        long count = 0;
+        while( argPtr )
+        {
+            count++;
+            argPtr = osc_expr_arg_next(argPtr);
+        }
+        
+        if( count < 2 )
+        {
+            osc_expr_arg_freeList($3);
+            $3 = NULL;
+            
+            osc_expr_error(context, &yylloc, input_string, OSC_ERR_EXPPARSE, "requires 2 or more arguments", NULL, NULL);
+            return 1;
+        }
+
+        t_osc_expr_arg *argArr[count];
+        argPtr = $3;
+        count = 0;
+        while( argPtr )
+        {
+            argArr[count++] = argPtr;
+            argPtr = osc_expr_arg_next(argPtr);
+        }
+
+        t_osc_expr *e = NULL;
+        
+        long finalElse = (count % 2) == 1;
+
+        long i;        
+        for( i = count-2-finalElse; i >= 0; i-=2 )
+        {
+            
+            t_osc_expr_arg * ifArg1 = NULL;
+            t_osc_expr_arg * ifArg2 = NULL;
+            
+            osc_expr_arg_copy(&ifArg1, argArr[i] );
+            osc_expr_arg_copy(&ifArg2, argArr[i+1] );
+            
+            osc_expr_arg_setNext(ifArg1, ifArg2);
+            
+            if( e )
+            {
+                t_osc_expr_arg *earg = osc_expr_arg_alloc();
+                osc_expr_arg_setExpr(earg, e);
+                osc_expr_arg_setNext(ifArg2, earg);
+            }
+            else if( finalElse )
+            {
+                t_osc_expr_arg * ifArg3 = NULL;
+                osc_expr_arg_copy(&ifArg3, argArr[i+2] );
+                osc_expr_arg_setNext(ifArg2, ifArg3);
+                finalElse = 0;
+            }
+            
+            e = osc_expr_parser_reduce_PrefixFunction(context, &yylloc, input_string, "if", ifArg1 );
+            
+        }
+      
+//
+//        char * ptr = NULL;
+//        long len = 0;
+//
+//        osc_expr_format(e, &len, &ptr);
+//        if( ptr ){
+//            printf("func %s \n", ptr );
+//            osc_mem_free(ptr);
+//        }
+
+        osc_expr_arg_freeList($3);
+        $3 = NULL;
+        
+        $$ = e;
 	}
 // Infix operators
 	| arg '+' arg {
