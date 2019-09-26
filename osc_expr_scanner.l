@@ -269,7 +269,7 @@ quote[[:space:]]*\( {
 						osc_atom_u_setTrue(yylval->atom);
 						return OSC_EXPR_NUM;
 					}
-(false|False|FALSE)			{
+(false|False|FALSE)	{
 						if(alloc_atom){
 							yylval->atom = osc_atom_u_alloc();
 						}
@@ -277,20 +277,25 @@ quote[[:space:]]*\( {
 						return OSC_EXPR_NUM;
 					}
 
-(nil|Nil|NIL)				{
+(nil|Nil|NIL)		{
 						if(alloc_atom){
 							yylval->atom = osc_atom_u_alloc();
 						}
 						osc_atom_u_setNil(yylval->atom);
 						return OSC_EXPR_NUM;
 					}
+					
 lambda				{
 						return OSC_EXPR_LAMBDA;
-				}
+					}
 
-let				{
+let					{
 						return OSC_EXPR_LET;
-				}
+					}
+
+cond				{
+						return OSC_EXPR_COND;
+					}
 
 \/[^.\+\-\*%\^!=\[\]:;,\?<>\&\|\\\{\}\(\) \n\t`]+  {
 						if(alloc_atom){
