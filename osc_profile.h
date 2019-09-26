@@ -37,20 +37,20 @@ extern "C" {
 #include <unistd.h>
 //#define RDTSC_CYCLES_PER_SECOND 2.261E09
 
-inline unsigned long long osc_profile_rdtsc(void){
+unsigned long long osc_profile_rdtsc(void){
 	unsigned hi, lo;
 	__asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
 	return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
 }
 
-inline double osc_profile_getTime(){
+double osc_profile_getTime(){
 	//output time in seconds
 	unsigned long long tsc;
 	tsc = osc_profile_rdtsc();
 	return (double)tsc;
 }
 
-inline double osc_profile_getCyclesPerSecond(){
+double osc_profile_getCyclesPerSecond(){
 	double t1 = osc_profile_getTime();
         usleep(1000000);
         double t2 = osc_profile_getTime();

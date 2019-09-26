@@ -1031,7 +1031,7 @@ expr:
 		osc_mem_free($1);
 		osc_mem_free($3);
 	}
-	| OSC_EXPR_STRING '.' OSC_EXPR_OSCADDRESS {
+	| parameter '.' OSC_EXPR_OSCADDRESS {
 		t_osc_expr_arg *a1 = osc_expr_arg_alloc();
 		t_osc_expr_arg *a2 = osc_expr_arg_alloc();
 		char *ptr = NULL;

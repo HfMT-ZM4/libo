@@ -241,12 +241,8 @@ int osc_expr_evalInLexEnv(t_osc_expr *f,
 			i++;
 		}
 		if(f->rec->func == osc_expr_delegateApply){
-			printf("%s:%d\n", __func__, __LINE__);
 			t_osc_bndl_u *bu = osc_bundle_u_alloc();
 			for(int i = 0; i < f_argc; i++){
-				char buf[strlen(f->rec->name) + 4];
-				sprintf(buf, "%s/%c", f->rec->name, i + 97);
-				printf("%s:%d: %s\n", __func__, __LINE__, buf);
 				t_osc_msg_u *m = osc_message_u_allocWithAddress(buf);
 				for(int j = 0; j < osc_atom_array_u_getLen(argv[i]); j++){
 					osc_message_u_appendAtom(m, osc_atom_array_u_get(argv[i], j));
@@ -1920,29 +1916,24 @@ static int osc_expr_specFunc_assignToBundleMember(t_osc_expr *f,
 
 	t_osc_err error = osc_expr_evalArgInLexEnv(f_argv, lexenv, len, oscbndl, &arg1, context, delegationfn);
 	if(!arg1){
-        
-        if( error == OSC_ERR_EXPR_ADDRESSUNBOUND && osc_expr_getArgCount(f) > 2 &&
-           f_argv->type == OSC_EXPR_ARG_TYPE_OSCADDRESS && f_argv->next->type == OSC_EXPR_ARG_TYPE_OSCADDRESS )
-        {
-            t_osc_msg_u *m = osc_message_u_allocWithAddress( f_argv->arg.osc_address );
-            t_osc_bundle_u * b = osc_bundle_u_alloc();
-            osc_message_u_appendBndl_u(m, b);
+		if(error == OSC_ERR_EXPR_ADDRESSUNBOUND && osc_expr_getArgCount(f) > 2 &&
+		   f_argv->type == OSC_EXPR_ARG_TYPE_OSCADDRESS && f_argv->next->type == OSC_EXPR_ARG_TYPE_OSCADDRESS ){
+			t_osc_msg_u *m = osc_message_u_allocWithAddress( f_argv->arg.osc_address );
+			t_osc_bundle_u * b = osc_bundle_u_alloc();
+			osc_message_u_appendBndl_u(m, b);
             
-            osc_bundle_s_appendMessage(len, oscbndl, osc_message_u_serialize(m) );
+			osc_bundle_s_appendMessage(len, oscbndl, osc_message_u_serialize(m) );
             
-            arg1 = osc_message_u_getArgArrayCopy(m);
-            
-        }
-        else
-        {
-            return 1;
-        }
-        
+			arg1 = osc_message_u_getArgArrayCopy(m);
+		}else{
+			return(1);
+		}
 	}
-    int free_arg1 = 1;
+        int free_arg1 = 1;
 	long bndl_len_s = 0;
 	char *bndl_s = NULL;
 	if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg1, 0)) == 's'){
+		printf("%s:%d\n", __func__, __LINE__);
 		char *string = osc_atom_u_getStringPtr(osc_atom_array_u_get(arg1, 0));
 		t_osc_message_array_s *msgar = osc_bundle_s_lookupAddress(*len, *oscbndl, string, 1);
 		if(msgar){
@@ -1959,6 +1950,7 @@ static int osc_expr_specFunc_assignToBundleMember(t_osc_expr *f,
 			osc_message_array_s_free(msgar);
 		}
 	}else if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg1, 0)) == OSC_BUNDLE_TYPETAG){
+		printf("%s:%d\n", __func__, __LINE__);
 		t_osc_bndl_u *b = osc_atom_u_getBndl(osc_atom_array_u_get(arg1, 0));
 		bndl_len_s = osc_bundle_u_nserialize(NULL, 0, b);
 		bndl_s = osc_mem_alloc(bndl_len_s);
@@ -2003,7 +1995,7 @@ static int osc_expr_specFunc_assignToBundleMember(t_osc_expr *f,
 
 		if(ret){
 			// cleanup
-			return ret;
+			return(ret);
 		}
 
 		if(osc_expr_arg_getType(f_argv) == OSC_EXPR_ARG_TYPE_EXPR){
@@ -2025,7 +2017,7 @@ static int osc_expr_specFunc_assignToBundleMember(t_osc_expr *f,
 				*out = NULL;
 				ret = osc_expr_specFunc_assigntoindex(assign, lexenv, len, oscbndl, out, context, delegationfn);
 			}else{
-				return 1;
+				return(1);
 			}
 		}else{
 			osc_atom_u_setBndl_s(osc_atom_array_u_get(arg1, 0), bndl_len_s, bndl_s);
@@ -2049,10 +2041,10 @@ static int osc_expr_specFunc_assignToBundleMember(t_osc_expr *f,
 		if(bndl_s){
 			osc_mem_free(bndl_s);
 		}
-		return ret;
+		return(ret);
 	}
 
-	return 1;
+	return(1);
 }
 
 int osc_expr_scanner_lex (YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started);

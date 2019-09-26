@@ -1,4 +1,4 @@
-LIBO_TEST_BASENAMES = osc_expr_let_leaktest
+LIBO_TEST_BASENAMES = osc_expr_test
 
 INCLUDES = -I.. -I/System/Library/Frameworks/Carbon.framework/Headers -I/System/Library/Frameworks/CoreServices.framework/Headers
 CFLAGS += -std=c99 -Wall -Wno-trigraphs -arch x86_64 -O0 -g
