@@ -574,6 +574,7 @@ t_osc_expr_rec *osc_expr_parser_reduce_Lambda(void *context, YYLTYPE *llocp,
 		p = parameters;
 		for(int i = 0; i < nparams; i++){
 			required_args[i] = NULL;
+			printf("%s\n", osc_atom_u_getStringPtr(p));
 			osc_util_strdup(required_args + i, osc_atom_u_getStringPtr(p));
 			t_osc_atom_u *killme = p;
 			p = p->next;
@@ -799,8 +800,12 @@ function:
 
 parameters: parameter
 	| parameters ',' parameter {
-		$3->next = $1;
-		$$ = $3;
+		t_osc_atom_u *a = $1;
+		while(a->next){
+			a = a->next;
+		}
+		a->next = $3;
+		$$ = $1;
 	}
 ;
 
