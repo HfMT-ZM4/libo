@@ -243,6 +243,8 @@ int osc_expr_evalInLexEnv(t_osc_expr *f,
 		if(f->rec->func == osc_expr_delegateApply){
 			t_osc_bndl_u *bu = osc_bundle_u_alloc();
 			for(int i = 0; i < f_argc; i++){
+				char buf[strlen(f->rec->name) + 4];
+				sprintf(buf, "%s/%c", f->rec->name, i + 97);
 				t_osc_msg_u *m = osc_message_u_allocWithAddress(buf);
 				for(int j = 0; j < osc_atom_array_u_getLen(argv[i]); j++){
 					osc_message_u_appendAtom(m, osc_atom_array_u_get(argv[i], j));
