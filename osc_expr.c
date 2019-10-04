@@ -512,15 +512,16 @@ static int osc_expr_specFunc_apply(t_osc_expr *f,
 			t_osc_atom_ar_u *ar = NULL;
 			t_osc_err e = osc_expr_evalArgInLexEnv(f_argv, lexenv, len, oscbndl, &ar, context, delegationfn);
 			if(e == OSC_ERR_EXPR_ADDRESSUNBOUND){
-				//osc_expr_err_unbound(context, osc_expr_arg_getOSCAddress(f_argv), "apply");
-				//return e;
-				t_osc_expr_rec *r = osc_expr_rec_alloc();
-				osc_expr_rec_setName(r, osc_expr_arg_getOSCAddress(f_argv));
-				osc_expr_rec_setFunction(r, osc_expr_delegateApply);
-				t_osc_expr *e = osc_expr_alloc();
-				osc_expr_setRec(e, r);
-				osc_expr_setArg(e, f_argv->next);
-				return osc_expr_evalInLexEnv(e, lexenv, len, oscbndl, out, context, delegationfn);
+				osc_expr_err_unbound(context, osc_expr_arg_getOSCAddress(f_argv), "apply");
+				return e;
+				// delegation : 
+				// t_osc_expr_rec *r = osc_expr_rec_alloc();
+				// osc_expr_rec_setName(r, osc_expr_arg_getOSCAddress(f_argv));
+				// osc_expr_rec_setFunction(r, osc_expr_delegateApply);
+				// t_osc_expr *e = osc_expr_alloc();
+				// osc_expr_setRec(e, r);
+				// osc_expr_setArg(e, f_argv->next);
+				// return osc_expr_evalInLexEnv(e, lexenv, len, oscbndl, out, context, delegationfn);
 			}
 			if(!ar){
 				//error
