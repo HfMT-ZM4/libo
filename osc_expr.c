@@ -1345,6 +1345,9 @@ static int osc_expr_specFunc_existsorbound(t_osc_expr *f,
 						osc_atom_array_u_free(ar);
 						goto err;
 					}
+					if(ar){
+						osc_atom_array_u_free(ar);
+					}
 				}
 			}
 		}
