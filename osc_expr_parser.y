@@ -249,7 +249,9 @@ void osc_expr_error_formatLocation(YYLTYPE *llocp, char *input_string, char **bu
 	char s3[len * 2];
 	memcpy(s1, input_string, llocp->first_column);
 	s1[llocp->first_column] = '\0';
-	memcpy(s2, input_string + llocp->first_column, llocp->last_column - llocp->first_column);
+	memcpy(s2,
+	       input_string + llocp->first_column,
+	       llocp->last_column - llocp->first_column);
 	s2[llocp->last_column - llocp->first_column] = '\0';
 	memcpy(s3, input_string + llocp->last_column, len - llocp->last_column);
 	s3[len - llocp->last_column] = '\0';
@@ -291,18 +293,19 @@ void osc_expr_error(void *context, YYLTYPE *llocp,
 		if(more_len){
 			ptr += sprintf(ptr, "%s\n", more);
 		}
-        
+
+		// basename() seems to crash under cygwin...
 		osc_error_handler(context,
-					__FILE__, //basename(__FILE__), // basename() seems to crash under cygwin...
+				  NULL, //__FILE__, //basename(__FILE__), 
 				  NULL,
-				  -1,
+				  llocp->first_line,
 				  errorcode,
 				  buf);
 	}else{
-	  osc_error_handler(context,
-					__FILE__,//basename(__FILE__),
+	  	osc_error_handler(context,
+				  NULL, //__FILE__,//basename(__FILE__),
 				  NULL,
-				  -1,
+				  llocp->first_line,
 				  errorcode,
 				  "");
 	}

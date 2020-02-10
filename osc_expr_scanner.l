@@ -31,8 +31,20 @@
 
 int colnum;
 
-#define YY_USER_INIT {yylineno = 0;colnum = 0; yylloc->first_line = 0; yylloc->first_column = 0; yylloc->last_column = 0; yylloc->last_line = 0;}
-#define YY_USER_ACTION {yylloc->first_line = yylineno; yylloc->first_column = colnum; colnum=colnum+yyleng; yylloc->last_column = colnum; yylloc->last_line = yylineno;}
+#define YY_USER_INIT {				\
+	yylineno = 0;colnum = 0;		\
+	yylloc->first_line = 0;			\
+	yylloc->first_column = 0;		\
+	yylloc->last_column = 0;		\
+	yylloc->last_line = 0;			\
+    }
+#define YY_USER_ACTION {			\
+	yylloc->first_line = yylineno;		\
+	yylloc->first_column = colnum;		\
+	colnum=colnum+yyleng;			\
+	yylloc->last_column = colnum;		\
+	yylloc->last_line = yylineno;		\
+    }
 
 int osc_expr_scanner_wrap(yyscan_t scanner){
 	return 1;
@@ -130,17 +142,17 @@ reserved_chars \+|-|\*|\/|%|^|!|=|\[|\]|:|;|\?|<|>|\&|\||\\|\{|\}|\(|\)
 	return OSC_EXPR_DBLQMARKEQ;
 }
 
-,|;|\(|\)|\{|\}				{
-						return *yytext;
-					}
-\[\[					{
-						//printf("open double brackets\n");
-						return OPEN_DBL_BRKTS;
-					}
-\]\]					{
-						//printf("close double brackets\n");
-						return CLOSE_DBL_BRKTS;
-					}
+,|;|\(|\)|\{|\}			{
+					return *yytext;
+				}
+\[\[				{
+					//printf("open double brackets\n");
+					return OPEN_DBL_BRKTS;
+				}
+\]\]				{
+					//printf("close double brackets\n");
+					return CLOSE_DBL_BRKTS;
+				}
 
 quote[[:space:]]*\( {
 	BEGIN(quote_function);
@@ -334,7 +346,9 @@ cond				{
 
 	*/
 
-[ \t\n]+	/* eat up whitespace */
+[ \t]+	{}/* eat up whitespace */
+
+\n {yylineno++;}
 
 
 

@@ -37,7 +37,7 @@ int osc_error_defaultHandler(void *context, t_osc_err errorcode, const char * co
 static t_osc_error_handler _osc_error_handler = osc_error_defaultHandler;
 
 int osc_error_handler(void *context,
-					const char * const filename,
+		      const char * const filename,
 		      const char * const functionname,
 		      int linenum,
 		      t_osc_err errorcode,
@@ -46,9 +46,6 @@ int osc_error_handler(void *context,
 {
 
 	if(_osc_error_handler){
-
-		// printf("%s context %p \n\tfilename %s \n\tfunctionname %s \n\tlinenum %d \n\terrorcode %d \n\tmoreinfo_fmt %s \n", __func__, context, filename, functionname, linenum, (int)errorcode, moreinfo_fmt );
-        
 		int buflen = MAX_ERR_STRING_LEN;
 		char buf[buflen];
 		char *pos = buf;
@@ -56,16 +53,28 @@ int osc_error_handler(void *context,
 			pos += snprintf(pos, buflen, "%s:\n", filename);
 		}
 		if(functionname){
-			pos += snprintf(pos, (buflen - (pos - buf)), "%s(): ", functionname);
-		}
-		if(linenum > 0){
-			pos += snprintf(pos, (buflen - (pos - buf)), "%d: ", linenum);
+			pos += snprintf(pos,
+					(buflen - (pos - buf)),
+					"%s(): ",
+					functionname);
 		}
 		if(errorcode){
-			pos += snprintf(pos, (buflen - (pos - buf)), "%s: \n", osc_error_string(errorcode));
+			pos += snprintf(pos,
+					(buflen - (pos - buf)),
+					"%s\n",
+					osc_error_string(errorcode));
+		}
+		if(linenum >= 0){
+			pos += snprintf(pos,
+					(buflen - (pos - buf)),
+					"line %d\n",
+					linenum);
 		}
 		if(moreinfo_fmt){
-			pos += snprintf(pos, (buflen - (pos - buf)), "%s", moreinfo_fmt);
+			pos += snprintf(pos,
+					(buflen - (pos - buf)),
+					"%s",
+					moreinfo_fmt);
 		}
 		va_list ap;
 		va_start(ap, moreinfo_fmt);
