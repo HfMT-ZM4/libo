@@ -85,6 +85,8 @@ void osc_expr_setRec(t_osc_expr *e, t_osc_expr_rec *rec);
 t_osc_expr_rec *osc_expr_getRec(t_osc_expr *e);
 void osc_expr_setNext(t_osc_expr *e, t_osc_expr *next);
 t_osc_expr *osc_expr_next(t_osc_expr *e);
+void osc_expr_setLineno(t_osc_expr *e, int lineno);
+int osc_expr_getLineno(t_osc_expr *e);
 void osc_expr_setArg(t_osc_expr *e, t_osc_expr_arg *a);
 void osc_expr_prependArg(t_osc_expr *e, t_osc_expr_arg *a);
 void osc_expr_appendArg(t_osc_expr *e, t_osc_expr_arg *a);

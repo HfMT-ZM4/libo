@@ -37,7 +37,8 @@ struct _osc_expr{
 	struct _osc_expr_rec *rec;
 	struct _osc_expr_arg *argv;
 	int argc; 
-	struct _osc_expr *next; 
+	struct _osc_expr *next;
+	int lineno;
 };
 
 struct _osc_expr_arg{

@@ -32,7 +32,7 @@
 int colnum;
 
 #define YY_USER_INIT {				\
-	yylineno = 0;colnum = 0;		\
+	yylineno = 1;colnum = 0;		\
 	yylloc->first_line = 0;			\
 	yylloc->first_column = 0;		\
 	yylloc->last_column = 0;		\

@@ -407,7 +407,8 @@ void osc_expr_parser_reportInvalidLvalError(void *context, YYLTYPE *llocp,
 		       lvalue);
 }
 
-t_osc_expr *osc_expr_parser_reduce_PrefixFunction(void *context, YYLTYPE *llocp,
+t_osc_expr *osc_expr_parser_reduce_PrefixFunction(void *context,
+						  YYLTYPE *llocp,
 						  char *input_string,
 						  char *function_name,
 						  t_osc_expr_arg *arglist);
@@ -428,6 +429,7 @@ t_osc_expr *osc_expr_parser_reduce_InfixOperator(void *context, YYLTYPE *llocp,
 	osc_expr_setRec(e, r);
 	osc_expr_prependArg(e, right);
 	osc_expr_prependArg(e, left);
+	osc_expr_setLineno(e, llocp->first_line);
 	return e;
 }
 
@@ -446,6 +448,7 @@ t_osc_expr *osc_expr_parser_reduce_InfixAssignmentOperator(void *context, YYLTYP
 	osc_expr_arg_setExpr(assign_arg, infix);
 	osc_expr_arg_setNext(assign_target, assign_arg);
 	t_osc_expr *assign = osc_expr_parser_reduce_PrefixFunction(context, llocp, input_string, "assign", assign_target);
+	osc_expr_setLineno(assign, llocp->first_line);
 	return assign;
 }
 
@@ -456,7 +459,6 @@ t_osc_expr *osc_expr_parser_reduce_PrefixFunction(void *context,
 						 t_osc_expr_arg *arglist)
 {
 	//printf("%s context %p\n", __func__, context);
-
 	t_osc_expr_rec *r = osc_expr_lookupFunction(function_name);
 	if(!r){
 		osc_expr_parser_reportUnknownFunctionError(context, llocp, input_string, function_name);
@@ -470,6 +472,7 @@ t_osc_expr *osc_expr_parser_reduce_PrefixFunction(void *context,
 	if(arglist){
 		osc_expr_setArg(e, arglist);
 	}
+	osc_expr_setLineno(e, llocp->first_line);
 	return e;
 }
 
@@ -502,6 +505,7 @@ t_osc_expr *osc_expr_parser_reduce_PrefixUnaryOperator(void *context, YYLTYPE *l
 	osc_expr_arg_setExpr(assign_arg, pfu);
 	osc_expr_arg_setNext(assign_target, assign_arg);
 	t_osc_expr *assign = osc_expr_parser_reduce_PrefixFunction(context, llocp, input_string, "assign", assign_target);
+	osc_expr_setLineno(assign, llocp->first_line);
 	return assign;
 }
 
@@ -524,6 +528,7 @@ t_osc_expr *osc_expr_parser_reduce_PostfixUnaryOperator(void *context, YYLTYPE *
 	osc_expr_arg_setOSCAddress(arg2, oscaddress_copy);
 	osc_expr_arg_setNext(arg2, arg1);
 	t_osc_expr *prog1 = osc_expr_parser_reduce_PrefixFunction(context, llocp, input_string, "prog1", arg2);
+	osc_expr_setLineno(prog1, llocp->first_line);
 	return prog1;
 }
 
@@ -557,7 +562,9 @@ t_osc_expr *osc_expr_parser_reduce_NullCoalescingOperator(void *context, YYLTYPE
 	t_osc_expr_arg *arg3 = arg_if_null;
 	osc_expr_arg_setNext(arg1, arg2);
 	osc_expr_arg_setNext(arg2, arg3);
-	return osc_expr_parser_reduce_PrefixFunction(context, llocp, input_string, "if", arg1);
+	t_osc_expr *e = osc_expr_parser_reduce_PrefixFunction(context, llocp, input_string, "if", arg1);
+	osc_expr_setLineno(e, llocp->first_line);
+	return e;
 }
 
 t_osc_expr_rec *osc_expr_parser_reduce_Lambda(void *context, YYLTYPE *llocp,
@@ -627,6 +634,7 @@ t_osc_expr_rec *osc_expr_parser_reduce_Lambda(void *context, YYLTYPE *llocp,
 		}
 	}
 	osc_expr_rec_setExtra(lambda, exprlist);
+	osc_expr_setLineno(exprlist, llocp->first_line);
 	return lambda;
 }
 
@@ -945,6 +953,7 @@ expr:
 		osc_expr_arg_append(a, $3);
 		osc_expr_setArg(e, a);
 		osc_atom_u_free($1);
+		osc_expr_setLineno(e, yylloc.first_line);
 		$$ = e;
 	}
 	| OSC_EXPR_OSCADDRESS '(' ')' %prec OSC_EXPR_FUNC_CALL {
@@ -957,6 +966,7 @@ expr:
 		osc_expr_arg_setOSCAddress(a, address);
 		osc_expr_setArg(e, a);
 		osc_atom_u_free($1);
+		osc_expr_setLineno(e, yylloc.first_line);
 		$$ = e;
 	}
 	| OSC_EXPR_COND '(' args ')' %prec OSC_EXPR_FUNC_CALL {
@@ -1139,6 +1149,7 @@ expr:
 		$$ = osc_expr_alloc();
 		osc_expr_setRec($$, osc_expr_lookupFunction("!"));
 		osc_expr_setArg($$, $2);
+		osc_expr_setLineno($$, yylloc.first_line);
 	}
 	| '-' arg %prec '!'{
 		$$ = osc_expr_alloc();
@@ -1147,6 +1158,7 @@ expr:
 		osc_expr_arg_setOSCAtom(zero, osc_atom_u_allocWithInt32(0));
 		osc_expr_arg_setNext(zero, $2);
 		osc_expr_setArg($$, zero);
+		osc_expr_setLineno($$, yylloc.first_line);
 	}
 // prefix inc/dec
 	| OSC_EXPR_INC OSC_EXPR_OSCADDRESS %prec OSC_EXPR_PREFIX_INC {

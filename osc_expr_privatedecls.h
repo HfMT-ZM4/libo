@@ -26,9 +26,23 @@
 
 */
 
-static void osc_expr_err_badInfixArg(void *context, char *func, char typetag, int argnum, t_osc_atom_u *left, t_osc_atom_u *right);
-static void osc_expr_err_unbound(void *context, char *address, char *func);
-static void osc_expr_err_argnum(void *context, unsigned int expected, unsigned int found, unsigned int optional_args_allowed, char *func);
+static void osc_expr_err_badInfixArg(void *context,
+				     int lineno,
+				     char *func,
+				     char typetag,
+				     int argnum,
+				     t_osc_atom_u *left,
+				     t_osc_atom_u *right);
+static void osc_expr_err_unbound(void *context,
+				 int lineno,
+				 char *address,
+				 char *func);
+static void osc_expr_err_argnum(void *context,
+				int lineno,
+				unsigned int expected,
+				unsigned int found,
+				unsigned int optional_args_allowed,
+				char *func);
 
 static t_osc_err osc_expr_evalArgInLexEnv(t_osc_expr_arg *arg,
 					  t_osc_expr_lexenv *lexenv,
