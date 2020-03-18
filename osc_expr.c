@@ -2048,7 +2048,7 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 						  NULL,
 						  osc_expr_getLineno(f),
 						  OSC_ERR_EXPR_ARGCHK,
-						  "getbundlemember: error evaluating arg 2");
+						  "getbundlemember: error evaluating second argument");
 				return ret;
 			}
 			t_osc_expr_arg *arg = osc_expr_arg_alloc();
@@ -2058,6 +2058,15 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 			ret = osc_expr_evalArgInLexEnv(arg, lexenv, &bndl_len_s, &bndl_s, out, context, delegationfn);
 			osc_atom_array_u_free(a);
 			osc_expr_arg_free(arg);
+			if(ret){
+				osc_error_handler(context,
+						  NULL,
+						  NULL,
+						  osc_expr_getLineno(f),
+						  OSC_ERR_EXPR_ARGCHK,
+						  "getbundlemember: error evaluating second argument");
+				return ret;
+			}
 		}else if(osc_expr_arg_getType(f_argv->next) == OSC_EXPR_ARG_TYPE_STRING ||
 			 osc_expr_arg_getType(f_argv->next) == OSC_EXPR_ARG_TYPE_ATOM){
 			osc_expr_arg_setType(f_argv->next, OSC_EXPR_ARG_TYPE_ATOM);
@@ -2079,15 +2088,29 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 			ret = osc_expr_evalArgInLexEnv(arg, lexenv, &bndl_len_s, &bndl_s, out, context, delegationfn);
 			osc_atom_array_u_free(a);
 			osc_expr_arg_free(arg);
+			if(ret){
+				osc_error_handler(context,
+						  NULL,
+						  NULL,
+						  osc_expr_getLineno(f),
+						  OSC_ERR_EXPR_ARGCHK,
+						  "getbundlemember: error evaluating second argument");
+				return ret;
+			}
+		}else{
+			ret = osc_expr_evalArgInLexEnv(f_argv->next, lexenv, &bndl_len_s, &bndl_s, out, context, delegationfn);
+			if(ret){
+				osc_error_handler(context,
+						  NULL,
+						  NULL,
+						  osc_expr_getLineno(f),
+						  OSC_ERR_EXPR_ARGCHK,
+						  "getbundlemember: error evaluating second argument");
+				return ret;
+			}
 		}
 		osc_mem_free(bndl_s);
 		osc_atom_array_u_free(arg1);
-		osc_error_handler(context,
-				  NULL,
-				  NULL,
-				  osc_expr_getLineno(f),
-				  OSC_ERR_EXPR_ARGCHK,
-				  "getbundlemember: second address couldn't be resolved to a bundle");
 		return ret;
 	}
 	osc_error_handler(context,
