@@ -1404,25 +1404,114 @@ static int osc_expr_specFunc_existsorbound(t_osc_expr *f,
 	case OSC_EXPR_ARG_TYPE_EXPR:
 		{
 			if(osc_expr_arg_getExpr(f_argv)->rec->func == osc_expr_getbundlemember){
-				t_osc_atom_ar_u *ar = NULL;
-				int err = osc_expr_evalInLexEnv(osc_expr_arg_getExpr(f_argv), lexenv, len, oscbndl, &ar, context, delegationfn);
-				*out = osc_atom_array_u_alloc(1);
-				if(err){
-					osc_atom_u_setFalse(osc_atom_array_u_get(*out, 0));
-				}else if(!ar){
-					if(func == osc_bundle_s_addressIsBound){
-						osc_atom_u_setFalse(osc_atom_array_u_get(*out, 0));
+				// in earlier versions, we were calling getbundlemember and looking at the results,
+				// but this was only possible because gbm didn't report (m)any errors. it has better
+				// error reporting now, but that means that we can't use it here
+				t_osc_expr_arg *gbm_argv = osc_expr_getArgs(osc_expr_arg_getExpr(f_argv));
+				t_osc_atom_ar_u *arg1 = NULL;
+				t_osc_err ret = osc_expr_evalArgInLexEnv(gbm_argv, lexenv, len, oscbndl, &arg1, context, delegationfn);
+				if(!arg1 || ret){
+					osc_error_handler(context,
+							  NULL,
+							  NULL,
+							  osc_expr_getLineno(f),
+							  OSC_ERR_EXPR_ARGCHK,
+							  "bound: could not resolve the first argument of getbundlemember() to a bundle.");
+					return OSC_ERR_EXPR_ARGCHK;
+				}
+				long bndl_len_s = 0;
+				char *bndl_s = NULL;
+				if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg1, 0)) == 's'){
+					char *string = osc_atom_u_getStringPtr(osc_atom_array_u_get(arg1, 0));
+					t_osc_message_array_s *msgar = osc_bundle_s_lookupAddress(*len, *oscbndl, string, 1);
+					if(msgar){
+						t_osc_msg_s *m = osc_message_array_s_get(msgar, 0);
+						t_osc_atom_s *a = NULL;
+						osc_message_s_getArg(m, 0, &a);
+						t_osc_bndl_s *b = osc_atom_s_getBndlCopy(a);
+						bndl_len_s = osc_bundle_s_getLen(b);
+						bndl_s = osc_bundle_s_getPtr(b);
+						osc_atom_s_free(a);
+						osc_bundle_s_free(b);
+						osc_message_array_s_free(msgar);
 					}else{
-						osc_atom_u_setTrue(osc_atom_array_u_get(*out, 0));
+						osc_expr_err_unbound(context,
+								     osc_expr_getLineno(f),
+								     osc_atom_u_getStringPtr(osc_atom_array_u_get(arg1, 0)),
+								     "bound: getbundlemember");
+						return OSC_ERR_EXPR_ADDRESSUNBOUND;
+					}
+				}else if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg1, 0)) == OSC_BUNDLE_TYPETAG){
+					t_osc_bndl_u *b = osc_atom_u_getBndl(osc_atom_array_u_get(arg1, 0));
+					bndl_len_s = osc_bundle_u_nserialize(NULL, 0, b);
+					bndl_s = osc_mem_alloc(bndl_len_s);
+					osc_bundle_u_nserialize(bndl_s, bndl_len_s, b);
+				}
+
+				if(bndl_len_s && bndl_s){
+					if(osc_expr_arg_getType(gbm_argv->next) == OSC_EXPR_ARG_TYPE_EXPR){
+						t_osc_atom_ar_u *a = NULL;
+						t_osc_expr *e = osc_expr_arg_getExpr(gbm_argv->next);
+						if(e->rec->func == osc_expr_value){
+							ret = osc_expr_evalArgInLexEnv(osc_expr_getArgs(e), lexenv, len, oscbndl, &a, context, delegationfn);
+						}else{
+							ret = osc_expr_evalArgInLexEnv(gbm_argv->next, lexenv, len, oscbndl, &a, context, delegationfn);
+						}
+						if(!a || ret){
+							osc_error_handler(context,
+									  NULL,
+									  NULL,
+									  osc_expr_getLineno(f),
+									  OSC_ERR_EXPR_ARGCHK,
+									  "bound: error evaluating second argument of getbundlemember()");
+							return ret;
+									   }
+						osc_atom_u_getString(osc_atom_array_u_get(a, 0), 0, &address);
+					}else if(osc_expr_arg_getType(gbm_argv->next) == OSC_EXPR_ARG_TYPE_STRING ||
+						 osc_expr_arg_getType(gbm_argv->next) == OSC_EXPR_ARG_TYPE_OSCADDRESS ||
+						 osc_expr_arg_getType(gbm_argv->next) == OSC_EXPR_ARG_TYPE_ATOM){
+						osc_atom_u_getString(osc_expr_arg_getOSCAtom(gbm_argv->next), 0, &address);
+					}else{
+						//ret = osc_expr_evalArgInLexEnv(gbm_argv->next, lexenv, &bndl_len_s, &bndl_s, out, context, delegationfn);
+						//if(ret){
+							//t_osc_atom_u *aaa = osc_expr_arg_getOSCAtom(gbm_argv->next);
+							osc_error_handler(context,
+									  NULL,
+									  NULL,
+									  osc_expr_getLineno(f),
+									  OSC_ERR_EXPR_ARGCHK,
+									  "bound: second argument to getbundlemember() should be an OSC address or identifier");
+							return ret;
+							//}
 					}
 				}else{
-					if(osc_atom_array_u_getLen(ar) == 0 && func == osc_bundle_s_addressIsBound){
-						osc_atom_u_setFalse(osc_atom_array_u_get(*out, 0));
-					}else{
-						osc_atom_u_setTrue(osc_atom_array_u_get(*out, 0));
-					}
+					osc_error_handler(context,
+							  NULL,
+							  NULL,
+							  osc_expr_getLineno(f),
+							  OSC_ERR_EXPR_ARGCHK,
+							  "bound: the first arg of getbundlemember() is neither and address nor a bundle");
 				}
-				osc_atom_array_u_free(ar);
+				
+				// t_osc_atom_ar_u *ar = NULL;
+				// int err = osc_expr_evalInLexEnv(osc_expr_arg_getExpr(f_argv), lexenv, len, oscbndl, &ar, context, delegationfn);
+				// *out = osc_atom_array_u_alloc(1);
+				// if(err){
+				// 	osc_atom_u_setFalse(osc_atom_array_u_get(*out, 0));
+				// }else if(!ar){
+				// 	if(func == osc_bundle_s_addressIsBound){
+				// 		osc_atom_u_setFalse(osc_atom_array_u_get(*out, 0));
+				// 	}else{
+				// 		osc_atom_u_setTrue(osc_atom_array_u_get(*out, 0));
+				// 	}
+				// }else{
+				// 	if(osc_atom_array_u_getLen(ar) == 0 && func == osc_bundle_s_addressIsBound){
+				// 		osc_atom_u_setFalse(osc_atom_array_u_get(*out, 0));
+				// 	}else{
+				// 		osc_atom_u_setTrue(osc_atom_array_u_get(*out, 0));
+				// 	}
+				// }
+				// osc_atom_array_u_free(ar);
 				return 0;
 			}else{
 				t_osc_atom_ar_u *ar = NULL;
@@ -1978,20 +2067,20 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 					     long *len,
 					     char **oscbndl,
 					     t_osc_atom_ar_u **out,
-		 					 void *context,
-				   void (*delegationfn)(void *context, long len, char *oscbndl, long *return_len, char **return_oscbndl))
+					     void *context,
+					     void (*delegationfn)(void *context, long len, char *oscbndl, long *return_len, char **return_oscbndl))
 {
 	t_osc_expr_arg *f_argv = osc_expr_getArgs(f);
 	t_osc_atom_ar_u *arg1 = NULL;
-	t_osc_err err = osc_expr_evalArgInLexEnv(f_argv, lexenv, len, oscbndl, &arg1, context, delegationfn);
-	if(!arg1 || err){
+	t_osc_err ret = osc_expr_evalArgInLexEnv(f_argv, lexenv, len, oscbndl, &arg1, context, delegationfn);
+	if(!arg1 || ret){
 		osc_error_handler(context,
 				  NULL,
 				  NULL,
 				  osc_expr_getLineno(f),
 				  OSC_ERR_EXPR_ARGCHK,
-				  "getbundlemember: first arg not found");
-		return 1;
+				  "getbundlemember: the first argument could not be resolved to a bundle");
+		return OSC_ERR_EXPR_ARGCHK;
 	}
 	long bndl_len_s = 0;
 	char *bndl_s = NULL;
@@ -2002,8 +2091,6 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 			t_osc_msg_s *m = osc_message_array_s_get(msgar, 0);
 			t_osc_atom_s *a = NULL;
 			osc_message_s_getArg(m, 0, &a);
-			//char tmp[osc_bundle_s_getStructSize()];
-			//t_osc_bndl_s *b = (t_osc_bndl_s *)tmp;
 			t_osc_bndl_s *b = osc_atom_s_getBndlCopy(a);
 			bndl_len_s = osc_bundle_s_getLen(b);
 			bndl_s = osc_bundle_s_getPtr(b);
@@ -2013,7 +2100,7 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 		}else{
 			osc_expr_err_unbound(context,
 					     osc_expr_getLineno(f),
-					     osc_expr_arg_getOSCAddress(osc_atom_array_u_get(arg1, 0)),
+					     osc_atom_u_getStringPtr(osc_atom_array_u_get(arg1, 0)),
 					     "getbundlemember");
 			return OSC_ERR_EXPR_ADDRESSUNBOUND;
 		}
@@ -2022,18 +2109,9 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 		bndl_len_s = osc_bundle_u_nserialize(NULL, 0, b);
 		bndl_s = osc_mem_alloc(bndl_len_s);
 		osc_bundle_u_nserialize(bndl_s, bndl_len_s, b);
-	}//else if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg1, 0)) ==
+	}
 
-	int ret = 0;
 	if(bndl_len_s && bndl_s){
-	/* if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg1, 0)) == OSC_BUNDLE_TYPETAG){ */
-	/* 	t_osc_bndl_u *b = osc_atom_u_getBndl(osc_atom_array_u_get(arg1, 0)); */
-	/* 	if(b){ */
-	/* 		long l = 0; */
-	/* 		char *p = NULL; */
-	/* 		osc_bundle_u_serialize(b, &l, &p); */
-		//if(p){
-
 		if(osc_expr_arg_getType(f_argv->next) == OSC_EXPR_ARG_TYPE_EXPR){
 			t_osc_atom_ar_u *a = NULL;
 			t_osc_expr *e = osc_expr_arg_getExpr(f_argv->next);
@@ -2063,8 +2141,9 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 						  NULL,
 						  NULL,
 						  osc_expr_getLineno(f),
-						  OSC_ERR_EXPR_ARGCHK,
-						  "getbundlemember: error evaluating second argument");
+						  OSC_ERR_EXPR_ADDRESSUNBOUND,
+						  "getbundlemember: %s is unbound",
+						  st);
 				return ret;
 			}
 		}else if(osc_expr_arg_getType(f_argv->next) == OSC_EXPR_ARG_TYPE_STRING ||
@@ -2078,7 +2157,7 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 						  NULL,
 						  osc_expr_getLineno(f),
 						  OSC_ERR_EXPR_ARGCHK,
-						  "getbundlemember: error evaluating arg 2");
+						  "getbundlemember: error evaluating second argument");
 				return ret;
 			}
 			t_osc_expr_arg *arg = osc_expr_arg_alloc();
@@ -2093,8 +2172,9 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 						  NULL,
 						  NULL,
 						  osc_expr_getLineno(f),
-						  OSC_ERR_EXPR_ARGCHK,
-						  "getbundlemember: error evaluating second argument");
+						  OSC_ERR_EXPR_ADDRESSUNBOUND,
+						  "getbundlemember: %s is unbound",
+						  st);
 				return ret;
 			}
 		}else{
@@ -2104,8 +2184,9 @@ static int osc_expr_specFunc_getBundleMember(t_osc_expr *f,
 						  NULL,
 						  NULL,
 						  osc_expr_getLineno(f),
-						  OSC_ERR_EXPR_ARGCHK,
-						  "getbundlemember: error evaluating second argument");
+						  OSC_ERR_EXPR_ADDRESSUNBOUND,
+						  "getbundlemember: %s is unbound",
+						  osc_expr_arg_getOSCAddress(f_argv->next));
 				return ret;
 			}
 		}
