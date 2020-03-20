@@ -555,7 +555,7 @@ static int osc_expr_specFunc_apply(t_osc_expr *f,
 			if(!r){
 				// lookup didn't return a valid function, so let's see
 				// if we can parse this string.
-				t_osc_err err = osc_expr_parser_parseFunction(stp, &r, context);
+				t_osc_err err = osc_expr_parser_parseFunctionWithLineOffset(stp, &r, context, osc_expr_getLineno(f) - 2);
 				if(!err && r){
 					t_osc_expr *e = NULL;
 					osc_expr_copy(&e, f);
@@ -1856,7 +1856,7 @@ static int osc_expr_specFunc_eval(t_osc_expr *f,
 			char *expr = osc_atom_u_getStringPtr(osc_atom_array_u_get(arg, 0));
 			t_osc_expr *f = NULL;
 			OSC_PROFILE_TIMER_START(foo);
-			osc_expr_parser_parseExpr(expr, &f, context);
+			osc_expr_parser_parseExprWithLineOffset(expr, &f, context, osc_expr_getLineno(f) - 1);
 			OSC_PROFILE_TIMER_STOP(foo);
 			OSC_PROFILE_TIMER_PRINTF(foo);
 			OSC_PROFILE_TIMER_SNPRINTF(foo, buff);
@@ -1886,7 +1886,7 @@ static int osc_expr_specFunc_eval(t_osc_expr *f,
 			char *buf = NULL;
 			osc_atom_array_u_getStringArray(arg, &buflen, &buf, " ");
 			t_osc_expr *f = NULL;
-			osc_expr_parser_parseExpr(buf, &f, context);
+			osc_expr_parser_parseExprWithLineOffset(buf, &f, context, osc_expr_getLineno(f) - 1);
 			int ret = 0;
 			*out = osc_atom_array_u_alloc(1);
 
@@ -1994,11 +1994,11 @@ static int osc_expr_specFunc_compile(t_osc_expr *f,
 		if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg, 0)) == 's' &&
 		   osc_atom_array_u_getLen(arg) == 1){
 			osc_atom_u_getString(osc_atom_array_u_get(arg, 0), 0, &expression);
-			osc_expr_parser_parseExpr(expression, &thisf, context);
+			osc_expr_parser_parseExprWithLineOffset(expression, &thisf, context, osc_expr_getLineno(f));
 		}else{
 			long buflen = 0;
 			osc_atom_array_u_getStringArray(arg, &buflen, &expression, " ");
-			osc_expr_parser_parseExpr(expression, &thisf, context);
+			osc_expr_parser_parseExprWithLineOffset(expression, &thisf, context, osc_expr_getLineno(f));
 		}
 		osc_atom_array_u_free(arg);
 	}else if(arg2type == OSC_EXPR_ARG_TYPE_EXPR){

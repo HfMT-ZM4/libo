@@ -39,11 +39,11 @@ int colnum;
 	yylloc->last_line = 0;			\
     }
 #define YY_USER_ACTION {			\
-	yylloc->first_line = yylineno;		\
+	yylloc->first_line = yylineno + line_offset;		\
 	yylloc->first_column = colnum;		\
 	colnum=colnum+yyleng;			\
 	yylloc->last_column = colnum;		\
-	yylloc->last_line = yylineno;		\
+	yylloc->last_line = yylineno + line_offset;		\
     }
 
 int osc_expr_scanner_wrap(yyscan_t scanner){

@@ -55,9 +55,9 @@
 #endif
 
 #ifdef __cplusplus
-extern "C" int osc_expr_scanner_lex(YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started);
+extern "C" int osc_expr_scanner_lex(YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started, int line_offset);
 #else
-int osc_expr_scanner_lex(YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started);
+int osc_expr_scanner_lex(YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started, int line_offset);
 #endif
 
 }
@@ -72,15 +72,17 @@ int osc_expr_scanner_lex(YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan
 #endif
 
 #ifdef __cplusplus
-#define YY_DECL extern "C" int osc_expr_scanner_lex(YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started)
+#define YY_DECL extern "C" int osc_expr_scanner_lex(YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started, int line_offset)
 #else
-#define YY_DECL int osc_expr_scanner_lex(YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started)
+#define YY_DECL int osc_expr_scanner_lex(YYSTYPE * yylval_param, YYLTYPE * yylloc_param , yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started, int line_offset)
 #endif
 	//t_osc_err osc_expr_parser_parseString(char *ptr, t_osc_expr **f);
 #ifdef __cplusplus
 extern "C"{
 #endif
+t_osc_err osc_expr_parser_parseExprWithLineOffset(char *ptr, t_osc_expr **f, void *context, int line_offset);
 t_osc_err osc_expr_parser_parseExpr(char *ptr, t_osc_expr **f, void *context);
+t_osc_err osc_expr_parser_parseFunctionWithLineOffset(char *ptr, t_osc_expr_rec **f, void *context, int line_offset);
 t_osc_err osc_expr_parser_parseFunction(char *ptr, t_osc_expr_rec **f, void *context);
 #ifdef __cplusplus
 }
@@ -94,8 +96,8 @@ t_osc_err osc_expr_parser_parseFunction(char *ptr, t_osc_expr_rec **f, void *con
 int alloc_atom = 1;
 
 
-int osc_expr_parser_lex(YYSTYPE *yylval_param, YYLTYPE *llocp, yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started){
-	return osc_expr_scanner_lex(yylval_param, llocp, yyscanner, 1, buflen, buf, startcond, started);
+ int osc_expr_parser_lex(YYSTYPE *yylval_param, YYLTYPE *llocp, yyscan_t yyscanner, int alloc_atom, long *buflen, char **buf, int startcond, int *started, int line_offset){
+     return osc_expr_scanner_lex(yylval_param, llocp, yyscanner, 1, buflen, buf, startcond, started, line_offset);
 }
 
 /*
@@ -160,6 +162,11 @@ static void osc_expr_parser_foldConstants(t_osc_expr *expr)
 
 t_osc_err osc_expr_parser_parseExpr(char *ptr, t_osc_expr **f, void *context)
 {
+    return osc_expr_parser_parseExprWithLineOffset(ptr, f, context, 0);
+}
+
+t_osc_err osc_expr_parser_parseExprWithLineOffset(char *ptr, t_osc_expr **f, void *context, int line_offset)
+{
 	//printf("parsing %s\n", ptr);
 	// printf("%s context %p sizeof: %d \n", __func__, context, sizeof(void*));
 	int len = strlen(ptr);
@@ -189,7 +196,7 @@ t_osc_err osc_expr_parser_parseExpr(char *ptr, t_osc_expr **f, void *context)
 	char *buf = NULL;
 	int startcond = START_EXPNS;
 	int started = 0;
-	t_osc_err ret = osc_expr_parser_parse(&exprstack, &tmp_exprstack, NULL, scanner, ptr, &buflen, &buf, startcond, &started, context);
+	t_osc_err ret = osc_expr_parser_parse(&exprstack, &tmp_exprstack, NULL, scanner, ptr, &buflen, &buf, startcond, &started, context, line_offset);
 	osc_expr_scanner__delete_buffer(buf_state, scanner);
 	osc_expr_scanner_lex_destroy(scanner);
 	if(tmp_exprstack){
@@ -209,6 +216,11 @@ t_osc_err osc_expr_parser_parseExpr(char *ptr, t_osc_expr **f, void *context)
 
 t_osc_err osc_expr_parser_parseFunction(char *ptr, t_osc_expr_rec **f, void *context)
 {
+    return osc_expr_parser_parseFunctionWithLineOffset(ptr, f, context, 0);
+}
+
+t_osc_err osc_expr_parser_parseFunctionWithLineOffset(char *ptr, t_osc_expr_rec **f, void *context, int line_offset)
+{
 	//printf("%s context %p\n", __func__, context);
 
 	yyscan_t scanner;
@@ -221,7 +233,7 @@ t_osc_err osc_expr_parser_parseFunction(char *ptr, t_osc_expr_rec **f, void *con
 	char *buf = NULL;
 	int startcond = START_FUNCTION;
 	int started = 0;
-	t_osc_err ret = osc_expr_parser_parse(&exprstack, &tmp_exprstack, f, scanner, ptr, &buflen, &buf, startcond, &started, context);
+	t_osc_err ret = osc_expr_parser_parse(&exprstack, &tmp_exprstack, f, scanner, ptr, &buflen, &buf, startcond, &started, context, line_offset);
 
 	osc_expr_scanner__delete_buffer(buf_state, scanner);
 	osc_expr_scanner_lex_destroy(scanner);
@@ -375,7 +387,7 @@ int osc_expr_parser_checkArity(void* context, YYLTYPE *llocp, char *input_string
 	return 0;
 }
 
- void yyerror(YYLTYPE *llocp, t_osc_expr **exprstack, t_osc_expr **tmp_exprstack, t_osc_expr_rec **rec, void *scanner, char *input_string, long *buflen, char **buf, int startcond, int *started, void *context, char const *e)
+void yyerror(YYLTYPE *llocp, t_osc_expr **exprstack, t_osc_expr **tmp_exprstack, t_osc_expr_rec **rec, void *scanner, char *input_string, long *buflen, char **buf, int startcond, int *started, void *context, int line_offset, char const *e)
 {
 //	printf("(yyerror) %s context %p\n", __func__, context);
 	osc_expr_error(context, llocp, input_string, OSC_ERR_EXPPARSE, e);
@@ -634,7 +646,7 @@ t_osc_expr_rec *osc_expr_parser_reduce_Lambda(void *context, YYLTYPE *llocp,
 		}
 	}
 	osc_expr_rec_setExtra(lambda, exprlist);
-	osc_expr_setLineno(exprlist, llocp->first_line);
+	//osc_expr_setLineno(exprlist, llocp->first_line);
 	return lambda;
 }
 
@@ -655,6 +667,7 @@ t_osc_expr_rec *osc_expr_parser_reduce_Lambda(void *context, YYLTYPE *llocp,
 %parse-param{int startcond}
 %parse-param{int *started}
 %parse-param{void *context}
+%parse-param{int line_offset}
 
 %lex-param{void *scanner}
 %lex-param{int alloc_atom}
@@ -662,6 +675,7 @@ t_osc_expr_rec *osc_expr_parser_reduce_Lambda(void *context, YYLTYPE *llocp,
 %lex-param{char **buf}
 %lex-param{int startcond}
 %lex-param{int *started}
+%lex-param{int line_offset}
 
 %union {
 	t_osc_atom_u *atom;
@@ -715,8 +729,9 @@ t_osc_expr_rec *osc_expr_parser_reduce_Lambda(void *context, YYLTYPE *llocp,
 
 %%
 
-start: START_EXPNS expns
-| START_FUNCTION function;
+start: START_EXPNS expns 
+| START_FUNCTION function
+;
 
 expns:  {
 	if(*tmp_exprstack){
