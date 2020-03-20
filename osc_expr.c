@@ -1378,6 +1378,8 @@ static int osc_expr_specFunc_existsorbound(t_osc_expr *f,
 	t_osc_expr_arg *f_argv = osc_expr_getArgs(f);
 	int type = osc_expr_arg_getType(f_argv);
 	char *address = NULL;
+	long bndl_len_s = *len;
+	char *bndl_s = *oscbndl;
 	switch(type){
 	case OSC_EXPR_ARG_TYPE_ATOM:
 		{
@@ -1419,8 +1421,7 @@ static int osc_expr_specFunc_existsorbound(t_osc_expr *f,
 							  "bound: could not resolve the first argument of getbundlemember() to a bundle.");
 					return OSC_ERR_EXPR_ARGCHK;
 				}
-				long bndl_len_s = 0;
-				char *bndl_s = NULL;
+				
 				if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg1, 0)) == 's'){
 					char *string = osc_atom_u_getStringPtr(osc_atom_array_u_get(arg1, 0));
 					t_osc_message_array_s *msgar = osc_bundle_s_lookupAddress(*len, *oscbndl, string, 1);
@@ -1465,24 +1466,25 @@ static int osc_expr_specFunc_existsorbound(t_osc_expr *f,
 									  OSC_ERR_EXPR_ARGCHK,
 									  "bound: error evaluating second argument of getbundlemember()");
 							return ret;
-									   }
+						}
 						osc_atom_u_getString(osc_atom_array_u_get(a, 0), 0, &address);
 					}else if(osc_expr_arg_getType(gbm_argv->next) == OSC_EXPR_ARG_TYPE_STRING ||
-						 osc_expr_arg_getType(gbm_argv->next) == OSC_EXPR_ARG_TYPE_OSCADDRESS ||
 						 osc_expr_arg_getType(gbm_argv->next) == OSC_EXPR_ARG_TYPE_ATOM){
 						osc_atom_u_getString(osc_expr_arg_getOSCAtom(gbm_argv->next), 0, &address);
+					}else if(osc_expr_arg_getType(gbm_argv->next) == OSC_EXPR_ARG_TYPE_OSCADDRESS){
+						osc_util_strdup(&address, osc_expr_arg_getOSCAddress(gbm_argv->next));
 					}else{
 						//ret = osc_expr_evalArgInLexEnv(gbm_argv->next, lexenv, &bndl_len_s, &bndl_s, out, context, delegationfn);
 						//if(ret){
-							//t_osc_atom_u *aaa = osc_expr_arg_getOSCAtom(gbm_argv->next);
-							osc_error_handler(context,
-									  NULL,
-									  NULL,
-									  osc_expr_getLineno(f),
-									  OSC_ERR_EXPR_ARGCHK,
-									  "bound: second argument to getbundlemember() should be an OSC address or identifier");
-							return ret;
-							//}
+						//t_osc_atom_u *aaa = osc_expr_arg_getOSCAtom(gbm_argv->next);
+						osc_error_handler(context,
+								  NULL,
+								  NULL,
+								  osc_expr_getLineno(f),
+								  OSC_ERR_EXPR_ARGCHK,
+								  "bound: second argument to getbundlemember() should be an OSC address or identifier");
+						return ret;
+						//}
 					}
 				}else{
 					osc_error_handler(context,
@@ -1556,7 +1558,7 @@ static int osc_expr_specFunc_existsorbound(t_osc_expr *f,
 	if(address){
 		*out = osc_atom_array_u_alloc(1);
 		int res = 0;
-		func(*len, *oscbndl, address, 1, &res);
+		func(bndl_len_s, bndl_s, address, 1, &res);
 		osc_atom_u_setBool(osc_atom_array_u_get(*out, 0), res);
 		osc_mem_free(address);
 		return 0;
