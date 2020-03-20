@@ -1512,7 +1512,6 @@ static int osc_expr_specFunc_existsorbound(t_osc_expr *f,
 				// 	}
 				// }
 				// osc_atom_array_u_free(ar);
-				return 0;
 			}else{
 				t_osc_atom_ar_u *ar = NULL;
 				int err = osc_expr_evalInLexEnv(osc_expr_arg_getExpr(f_argv),
