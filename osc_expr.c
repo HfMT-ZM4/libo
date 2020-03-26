@@ -542,45 +542,78 @@ static int osc_expr_specFunc_apply(t_osc_expr *f,
 				//error
 				return 1;
 			}
-			if(osc_atom_array_u_getLen(ar) != 1){
-				//error
-				return 1;
-			}
-			if(osc_atom_u_getTypetag(osc_atom_array_u_get(ar, 0)) != 's'){
-				//error
-				return 1;
-			}
-			char *stp = osc_atom_u_getStringPtr(osc_atom_array_u_get(ar, 0));
-			r = osc_expr_lookupFunction(stp);
-			if(!r){
-				// lookup didn't return a valid function, so let's see
-				// if we can parse this string.
-				t_osc_err err = osc_expr_parser_parseFunctionWithLineOffset(stp, &r, context, osc_expr_getLineno(f) - 2);
-				if(!err && r){
-					t_osc_expr *e = NULL;
-					osc_expr_copy(&e, f);
-					t_osc_expr_arg *arg1 = osc_expr_getArgs(e);
-					t_osc_expr_arg *arg2 = osc_expr_arg_next(arg1);
-					switch(osc_expr_arg_getType(arg1)){
-					case OSC_EXPR_ARG_TYPE_ATOM:
-						osc_atom_u_free(osc_expr_arg_getOSCAtom(arg1));
-						break;
-					case OSC_EXPR_ARG_TYPE_EXPR:
-						osc_expr_free(osc_expr_arg_getExpr(arg1));
-						break;
-					case OSC_EXPR_ARG_TYPE_OSCADDRESS:
-						osc_mem_free(osc_expr_arg_getOSCAddress(arg1));
-						break;
-					}
-					osc_expr_arg_setFunction(arg1, r);
-					osc_expr_arg_setNext(arg1, arg2);
-					e->argv = arg1;
-					osc_expr_arg_setFunction(osc_expr_getArgs(e), r);
+			// if(osc_atom_array_u_getLen(ar) != 1){
+			// 	//error
+			// 	return 1;
+			// }
+			// if(osc_atom_u_getTypetag(osc_atom_array_u_get(ar, 0)) != 's'){
+			// 	//error
+			// 	return 1;
+			// }
+			if(osc_atom_array_u_getLen(ar) == 2 
+			   && osc_atom_u_getTypetag(osc_atom_array_u_get(ar, 0)) == 's'
+			   && osc_atom_u_getTypetag(osc_atom_array_u_get(ar, 1)) == 'b'){
+				char *blob = osc_atom_u_getBlob(osc_atom_array_u_get(ar, 1));
+				r = (t_osc_expr_rec *)(*((long *)(blob + 4)));
+				t_osc_expr *e = NULL;
+				osc_expr_copy(&e, f);
+				t_osc_expr_arg *arg1 = osc_expr_getArgs(e);
+				t_osc_expr_arg *arg2 = osc_expr_arg_next(arg1);
+				switch(osc_expr_arg_getType(arg1)){
+				case OSC_EXPR_ARG_TYPE_ATOM:
+					osc_atom_u_free(osc_expr_arg_getOSCAtom(arg1));
+					break;
+				case OSC_EXPR_ARG_TYPE_EXPR:
+					osc_expr_free(osc_expr_arg_getExpr(arg1));
+					break;
+				case OSC_EXPR_ARG_TYPE_OSCADDRESS:
+					osc_mem_free(osc_expr_arg_getOSCAddress(arg1));
+					break;
+				}
+				osc_expr_arg_setFunction(arg1, r);
+				osc_expr_arg_setNext(arg1, arg2);
+				e->argv = arg1;
+				osc_expr_arg_setFunction(osc_expr_getArgs(e), r);
 
-					int ret = osc_expr_evalInLexEnv(e, lexenv, len, oscbndl, out, context, delegationfn);
-					osc_expr_free(e);
-					osc_atom_array_u_free(ar);
-					return ret;
+				int ret = osc_expr_evalInLexEnv(e, lexenv, len, oscbndl, out, context, delegationfn);
+				osc_expr_getArgs(e)->arg.func = NULL;
+				osc_expr_free(e);
+				osc_atom_array_u_free(ar);
+				return ret;
+			}else if(osc_atom_array_u_getLen(ar) == 1
+				 && osc_atom_u_getTypetag(osc_atom_array_u_get(ar, 0)) == 's'){
+				char *stp = osc_atom_u_getStringPtr(osc_atom_array_u_get(ar, 0));
+				r = osc_expr_lookupFunction(stp);
+				if(!r){
+					// lookup didn't return a valid function, so let's see
+					// if we can parse this string.
+					t_osc_err err = osc_expr_parser_parseFunctionWithLineOffset(stp, &r, context, osc_expr_getLineno(f) - 2);
+					if(!err && r){
+						t_osc_expr *e = NULL;
+						osc_expr_copy(&e, f);
+						t_osc_expr_arg *arg1 = osc_expr_getArgs(e);
+						t_osc_expr_arg *arg2 = osc_expr_arg_next(arg1);
+						switch(osc_expr_arg_getType(arg1)){
+						case OSC_EXPR_ARG_TYPE_ATOM:
+							osc_atom_u_free(osc_expr_arg_getOSCAtom(arg1));
+							break;
+						case OSC_EXPR_ARG_TYPE_EXPR:
+							osc_expr_free(osc_expr_arg_getExpr(arg1));
+							break;
+						case OSC_EXPR_ARG_TYPE_OSCADDRESS:
+							osc_mem_free(osc_expr_arg_getOSCAddress(arg1));
+							break;
+						}
+						osc_expr_arg_setFunction(arg1, r);
+						osc_expr_arg_setNext(arg1, arg2);
+						e->argv = arg1;
+						osc_expr_arg_setFunction(osc_expr_getArgs(e), r);
+
+						int ret = osc_expr_evalInLexEnv(e, lexenv, len, oscbndl, out, context, delegationfn);
+						osc_expr_free(e);
+						osc_atom_array_u_free(ar);
+						return ret;
+					}
 				}
 			}
 			osc_atom_array_u_free(ar);
@@ -1974,53 +2007,101 @@ static int osc_expr_specFunc_compile(t_osc_expr *f,
 				   void (*delegationfn)(void *context, long len, char *oscbndl, long *return_len, char **return_oscbndl))
 {
 	t_osc_expr_arg *f_argv = osc_expr_getArgs(f);
-	if(osc_expr_arg_getType(f_argv) != OSC_EXPR_ARG_TYPE_OSCADDRESS){
-		return 1;
+	t_osc_atom_ar_u *arg = NULL;
+	t_osc_err ret = osc_expr_evalArgInLexEnv(f_argv, lexenv, len, oscbndl, &arg, context, delegationfn);
+	if(ret || !arg){
+		osc_error_handler(context,
+				  NULL,
+				  NULL,
+				  osc_expr_getLineno(f),
+				  OSC_ERR_EXPR_ARGCHK,
+				  "error evaluating argument to compile().\n");
+		return ret;
 	}
-	char *key_orig = osc_expr_arg_getOSCAddress(f_argv);
-	int keylen = strlen(key_orig);
-	char *key = osc_mem_alloc(keylen + 1);
-	strncpy(key, key_orig, keylen + 1);
-	char *expression = NULL;
-	t_osc_expr *thisf = NULL;
-	int arg2type = osc_expr_arg_getType(f_argv->next);
-	if(arg2type == OSC_EXPR_ARG_TYPE_OSCADDRESS){
-		// 2nd arg is an OSC address--look it up in the bundle
-		t_osc_atom_ar_u *arg = NULL;
-		t_osc_err err = osc_expr_evalArgInLexEnv(f_argv->next, lexenv, len, oscbndl, &arg, context, delegationfn);
-		if(err == OSC_ERR_EXPR_ADDRESSUNBOUND){
-			osc_expr_err_unbound(context, osc_expr_getLineno(f), osc_expr_arg_getOSCAddress(f_argv), "compile");
-			osc_mem_free(key);
-			return err;
-		}
-		if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg, 0)) == 's' &&
-		   osc_atom_array_u_getLen(arg) == 1){
-			osc_atom_u_getString(osc_atom_array_u_get(arg, 0), 0, &expression);
-			osc_expr_parser_parseExprWithLineOffset(expression, &thisf, context, osc_expr_getLineno(f));
-		}else{
-			long buflen = 0;
-			osc_atom_array_u_getStringArray(arg, &buflen, &expression, " ");
-			osc_expr_parser_parseExprWithLineOffset(expression, &thisf, context, osc_expr_getLineno(f));
-		}
-		osc_atom_array_u_free(arg);
-	}else if(arg2type == OSC_EXPR_ARG_TYPE_EXPR){
-		// 2nd arg is an expr
-		osc_expr_copy(&f, osc_expr_arg_getExpr(f_argv->next));
+	t_osc_atom_u *a = osc_atom_array_u_get(arg, 0);
+	if(!a || osc_atom_u_getTypetag(a) != 's'){
+		osc_error_handler(context,
+				  NULL,
+				  NULL,
+				  osc_expr_getLineno(f),
+				  OSC_ERR_EXPR_ARGCHK,
+				  "argument to compile() must produce a string.\n");
+		return OSC_ERR_EXPR_ARGCHK;
+	}
+	char *code = osc_atom_u_getStringPtr(a);
+	char *p = code;
+	while(*p != 0 && (*p == ' ' || *p == '\t' || *p == '\n')){
+		p++;
+	}
+	int32_t blobsize = sizeof(char*);
+	char blob[4 + blobsize];
+	*((int32_t *)blob) = hton32(blobsize);
+	*out = osc_atom_array_u_alloc(1);
+	t_osc_atom_u *aout = osc_atom_array_u_get(*out, 0);
+	if(!strncmp(p, "lambda", 6)){
+		t_osc_expr_rec *r = NULL;
+		osc_expr_parser_parseFunctionWithLineOffset(code, &r, context, osc_expr_getLineno(f));
+		*((long *)(blob + 4)) = (long)r;
+		osc_atom_u_setBlob(aout, blob);
+		
 	}else{
-		// free mem here
-		return 1;
-	}
-	if(thisf){
-		if(!osc_expr_funcobj_ht){
-			osc_expr_funcobj_ht = osc_hashtab_new(-1, osc_expr_funcobj_dtor);
-		}
-		osc_hashtab_store(osc_expr_funcobj_ht, keylen, key, thisf);
-	}
-	if(expression){
-		osc_mem_free(expression);
+		t_osc_expr *e = NULL;
+		osc_expr_parser_parseExprWithLineOffset(code, &e, context, osc_expr_getLineno(f));
+	        *((long *)(blob + 4)) = *((long *)e);
+		osc_atom_u_setBlob(aout, blob);
 	}
 	return 0;
 }
+// original compile code
+// {
+// 	t_osc_expr_arg *f_argv = osc_expr_getArgs(f);
+// 	if(osc_expr_arg_getType(f_argv) != OSC_EXPR_ARG_TYPE_OSCADDRESS){
+// 		return 1;
+// 	}
+// 	char *key_orig = osc_expr_arg_getOSCAddress(f_argv);
+// 	int keylen = strlen(key_orig);
+// 	char *key = osc_mem_alloc(keylen + 1);
+// 	strncpy(key, key_orig, keylen + 1);
+// 	char *expression = NULL;
+// 	t_osc_expr *thisf = NULL;
+// 	int arg2type = osc_expr_arg_getType(f_argv->next);
+// 	if(arg2type == OSC_EXPR_ARG_TYPE_OSCADDRESS){
+// 		// 2nd arg is an OSC address--look it up in the bundle
+// 		t_osc_atom_ar_u *arg = NULL;
+// 		t_osc_err err = osc_expr_evalArgInLexEnv(f_argv->next, lexenv, len, oscbndl, &arg, context, delegationfn);
+// 		if(err == OSC_ERR_EXPR_ADDRESSUNBOUND){
+// 			osc_expr_err_unbound(context, osc_expr_getLineno(f), osc_expr_arg_getOSCAddress(f_argv), "compile");
+// 			osc_mem_free(key);
+// 			return err;
+// 		}
+// 		if(osc_atom_u_getTypetag(osc_atom_array_u_get(arg, 0)) == 's' &&
+// 		   osc_atom_array_u_getLen(arg) == 1){
+// 			osc_atom_u_getString(osc_atom_array_u_get(arg, 0), 0, &expression);
+// 			osc_expr_parser_parseExprWithLineOffset(expression, &thisf, context, osc_expr_getLineno(f));
+// 		}else{
+// 			long buflen = 0;
+// 			osc_atom_array_u_getStringArray(arg, &buflen, &expression, " ");
+// 			osc_expr_parser_parseExprWithLineOffset(expression, &thisf, context, osc_expr_getLineno(f));
+// 		}
+// 		osc_atom_array_u_free(arg);
+// 	}else if(arg2type == OSC_EXPR_ARG_TYPE_EXPR){
+// 		// 2nd arg is an expr
+// 		osc_expr_copy(&f, osc_expr_arg_getExpr(f_argv->next));
+// 	}else{
+// 		// free mem here
+// 		return 1;
+// 	}
+// 	if(thisf){
+// 		if(!osc_expr_funcobj_ht){
+// 			osc_expr_funcobj_ht = osc_hashtab_new(-1, osc_expr_funcobj_dtor);
+// 		}
+// 		osc_hashtab_store(osc_expr_funcobj_ht, keylen, key, thisf);
+// 	}
+// 	if(expression){
+// 		osc_mem_free(expression);
+// 	}
+// 	return 0;
+// }
 
 static int osc_expr_specFunc_gettimetag(t_osc_expr *f,
 			    t_osc_expr_lexenv *lexenv,
