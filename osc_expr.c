@@ -5422,6 +5422,17 @@ int osc_expr_print(t_osc_expr *f,
 	return 0;
 }
 
+int osc_expr_line(t_osc_expr *f,
+		  int argc,
+		  t_osc_atom_ar_u **argv,
+		  t_osc_atom_ar_u **out,
+		  void *context)
+{
+	*out = osc_atom_array_u_alloc(1);
+	osc_atom_u_setInt32(osc_atom_array_u_get(*out, 0), osc_expr_getLineno(f));
+	return 0;
+}
+
 int osc_expr_bitand(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void* context)
 {
 	if(argc != 2){

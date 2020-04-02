@@ -196,6 +196,7 @@ int osc_expr_match(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_a
 int osc_expr_quickhull(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void *context);
 
 int osc_expr_print(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void *context);
+int osc_expr_line(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void *context);
 
 static struct _osc_expr_rec osc_expr_funcsym[] __attribute__((unused)) = {
 	// infix
@@ -1281,19 +1282,6 @@ static struct _osc_expr_rec osc_expr_funcsym[] __attribute__((unused)) = {
 	 "Round to nearest integral value",
 	 osc_expr_1arg_dbl,
 	 (void *)round},
-	//////////////////////////////////////////////////
-	{"mod",
-	 "/result = mod($1, $2)",
-	 2,
-	 0,
-	 (char *[]){"x"},
-	 (int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR},
-	 (char *[]){NULL},
-	 (int []){},
-	 (char *[]){"/math/arithmetic", NULL},
-	 "Modulo",
-	 osc_expr_2arg,
-	 (void *)osc_expr_mod},
 	//////////////////////////////////////////////////
 	{"nth",
 	 "/result = nth($1, $2)",
@@ -2715,6 +2703,18 @@ static struct _osc_expr_rec osc_expr_funcsym[] __attribute__((unused)) = {
 	 (char *[]){"", NULL},
 	 "print to a user-defined console",
 	 osc_expr_print,
+	 NULL},
+	{"line",
+	 "",
+	 0,
+	 0,
+	 (char *[]){NULL},
+	 (int []){},
+	 (char *[]){NULL},
+	 (int []){},
+	 (char *[]){"", NULL},
+	 "report the line number",
+	 osc_expr_line,
 	 NULL},
 };
 
