@@ -102,10 +102,12 @@ struct _osc_expr_rec { char *name; char *signature; int num_required_args; int n
 "tanh","/result = tanh($1)",1,0,(char *[]){"x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/trigonometric", NULL,},"Hyperbolic tangent",osc_expr_1arg_dbl,(void *)tanh
 "erf","/result = erf($1)",1,0,(char *[]){"x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"Error function (see http://pubs.opengroup.org/onlinepubs/007908799/xsh/erf.html)",osc_expr_1arg_dbl,(void *)erf
 "erfc","/result = erfc($1)",1,0,(char *[]){"x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"Complementary error function (see http://pubs.opengroup.org/onlinepubs/007908799/xsh/erf.html)",osc_expr_1arg_dbl,(void *)erfc
+"gamma","/result = gamma($1)",1,0,(char *[]){"x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"Log gamma function (same as \"lgamma\")",osc_expr_1arg_dbl,(void *)lgamma
 "hypot","/result = hypot($1, $2)",2,0,(char *[]){"x", "y",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR, OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"Euclidean distance",osc_expr_2arg_dbl_dbl,(void *)hypot
 "j0","/result = j0($1)",1,0,(char *[]){"x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"0th Bessel function of the first kind",osc_expr_1arg_dbl,(void *)j0
 "j1","/result = j1($1)",1,0,(char *[]){"x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"1st Bessel function of the first kind",osc_expr_1arg_dbl,(void *)j1
 "jn","/result = jn($1, $2)",2,0,(char *[]){"n", "x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR, OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"nth Bessel function of the first kind",osc_expr_2arg_dbl_dbl,(void *)jn
+"lgamma","/result = lgamma($1)",1,0,(char *[]){"x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"Log gamma function (same as \"gamma\")",osc_expr_1arg_dbl,(void *)lgamma
 "y0","/result = y0($1)",1,0,(char *[]){"x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"0th Bessel function of the second kind",osc_expr_1arg_dbl,(void *)y0
 "y1","/result = y1($1)",1,0,(char *[]){"x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"1st Bessel function of the second kind",osc_expr_1arg_dbl,(void *)y1
 "yn","/result = yn($1, $2)",2,0,(char *[]){"n", "x",},(int []){OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR, OSC_EXPR_ARG_TYPE_NUM_LIST_ADDR,},(char *[]){NULL,},(int []){},(char *[]){"/math/specialfunction", NULL,},"nth Bessel function of the second kind",osc_expr_2arg_dbl_dbl,(void *)yn
@@ -159,6 +161,8 @@ struct _osc_expr_rec { char *name; char *signature; int num_required_args; int n
 "strchar","/result = strchar($1, $2)",2,0,(char *[]){"Index, or list of indexes of characters.", "String, or list of strings",},(int []){OSC_EXPR_ARG_TYPE_NUMBER | OSC_EXPR_ARG_TYPE_LIST, OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_LIST | OSC_EXPR_ARG_TYPE_OSCADDRESS,},(char *[]){},(int []){},(char *[]){"/string/function", NULL,},"Get one or more characters from string as new string.",osc_expr_strchar,NULL
 "strfind","/result = strfind($1, $2)",2,0,(char *[]){"Sub-string to look for", "String to search for sub-string",},(int []){OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_OSCADDRESS, OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_OSCADDRESS,},(char *[]){},(int []){},(char *[]){"/string/function", NULL,},"Get first index corresponding to each instance of the sub-string found in the source string.",osc_expr_strfind,NULL
 "strcmp","/result = strcmp($1, $2)",2,1,(char *[]){"String 1", "String 2",},(int []){OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_OSCADDRESS, OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_OSCADDRESS,},(char *[]){"Number of characters to compare",},(int []){OSC_EXPR_ARG_TYPE_NUMBER | OSC_EXPR_ARG_TYPE_OSCADDRESS,},(char *[]){"/string/function", NULL,},"Compare two strings.",osc_expr_strcmp,NULL
+"split","/result = split(\"/\", $1)",2,0,(char *[]){"Separator", "String",},(int []){OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_OSCADDRESS, OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_OSCADDRESS,},(char *[]){NULL,},(int []){},(char *[]){"/string/function", NULL,},"Split a string at a separator.",osc_expr_split,NULL
+"join","/result = join(\"/\", $1)",2,-1,(char *[]){"Separator", "String",},(int []){OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_OSCADDRESS, OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_OSCADDRESS,},(char *[]){"More strings",},(int []){OSC_EXPR_ARG_TYPE_STRING | OSC_EXPR_ARG_TYPE_OSCADDRESS,},(char *[]){"/string/function", NULL,},"Join multiple strings with a separator.",osc_expr_join,NULL
 "bound","/result = bound($1)",1,0,(char *[]){"OSC address",},(int []){OSC_EXPR_ARG_TYPE_OSCADDRESS,},(char *[]){NULL,},(int []){},(char *[]){"/predicate", NULL,},"True if the address exists and has data bound to it, false otherwise.",osc_expr_bound,NULL
 "exists","/result = exists($1)",1,0,(char *[]){"OSC address",},(int []){OSC_EXPR_ARG_TYPE_OSCADDRESS | OSC_EXPR_ARG_TYPE_EXPR,},(char *[]){NULL,},(int []){},(char *[]){"/predicate", NULL,},"True if the address exists (regardless of whether it has data bound to it.",osc_expr_exists,NULL
 "emptybundle","/result = emptybundle()",0,0,(char *[]){NULL,},(int []){},(char *[]){NULL,},(int []){},(char *[]){"/predicate", NULL,},"True if the bundle is empty, false otherwise.",osc_expr_emptybundle,NULL
@@ -294,10 +298,12 @@ static char *osc_expr_symtab_function_names[] = {
 "tanh",
 "erf",
 "erfc",
+"gamma",
 "hypot",
 "j0",
 "j1",
 "jn",
+"lgamma",
 "y0",
 "y1",
 "yn",
@@ -351,6 +357,8 @@ static char *osc_expr_symtab_function_names[] = {
 "strchar",
 "strfind",
 "strcmp",
+"split",
+"join",
 "bound",
 "exists",
 "emptybundle",
