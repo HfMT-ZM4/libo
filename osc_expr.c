@@ -58,6 +58,7 @@
 #include "osc_expr_parser.h"
 #include "osc_expr_scanner.h"
 #include "osc_expr_privatedecls.h"
+#include "osc_expr_symtab.h"
 
 //#define __OSC_PROFILE__
 #include "osc_profile.h"
@@ -2532,14 +2533,15 @@ t_osc_atom_ar_u *osc_expr_lookupBindingInLexenv(t_osc_expr_lexenv *lexenv, char 
 
 t_osc_expr_rec *osc_expr_lookupFunction(char *name)
 {
-	t_osc_expr_rec *rec = NULL;
-	int i;
-	for(i = 0; i < sizeof(osc_expr_funcsym) / sizeof(t_osc_expr_rec); i++){
-		if(!strcmp(name, osc_expr_funcsym[i].name)){
-			rec = osc_expr_funcsym + i;
-			break;
-		}
-	}
+	t_osc_expr_rec *rec = osc_expr_symtab_lookup(name, strlen(name));
+	// int i;
+	// for(i = 0; i < sizeof(osc_expr_funcsym) / sizeof(t_osc_expr_rec); i++){
+	// 	if(!strcmp(name, osc_expr_funcsym[i].name)){
+	// 		rec = osc_expr_funcsym + i;
+	// 		break;
+	// 	}
+	// }
+	
 	return rec;
 }
 
@@ -7007,14 +7009,17 @@ void osc_expr_makeFunctionBundle(void)
 	t_osc_bndl_u *b = osc_bundle_u_alloc();
 	int i;
 	char buf[128];
-	for(i = 0; i < sizeof(osc_expr_funcsym) / sizeof(t_osc_expr_rec); i++){
+	//for(i = 0; i < sizeof(osc_expr_funcsym) / sizeof(t_osc_expr_rec); i++){
+	for(i = 0; i < osc_expr_symtab_num_functions(); i++){
 		int j = 0;
-		t_osc_expr_rec r = osc_expr_funcsym[i];
-		while(r.categories[j]){
+		//t_osc_expr_rec r = osc_expr_funcsym[i];
+		t_osc_expr_rec *r = osc_expr_lookupFunction(osc_expr_symtab_get_ith_function_name(i));
+		//printf("i = %d, name = %s\n", i, r->name);
+		while(r->categories[j]){
 			t_osc_msg_u *m = osc_message_u_alloc();
-			sprintf(buf, "/doc/category%s/%s", r.categories[j++], r.name);
+			sprintf(buf, "/doc/category%s/%s", r->categories[j++], r->name);
 			osc_message_u_setAddress(m, buf);
-			osc_message_u_appendString(m, r.name);
+			osc_message_u_appendString(m, r->name);
 			osc_bundle_u_addMsg(b, m);
 		}
 	}

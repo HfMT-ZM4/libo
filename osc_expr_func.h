@@ -198,6 +198,9 @@ int osc_expr_quickhull(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_at
 int osc_expr_print(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void *context);
 int osc_expr_line(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void *context);
 
+#define OSC_EXPR_USE_GPERF
+#ifndef OSC_EXPR_USE_GPERF
+
 static struct _osc_expr_rec osc_expr_funcsym[] __attribute__((unused)) = {
 	// infix
 	{"+",
@@ -2717,7 +2720,7 @@ static struct _osc_expr_rec osc_expr_funcsym[] __attribute__((unused)) = {
 	 osc_expr_line,
 	 NULL},
 };
-
+#endif // gperf
 #ifdef _cplusplus
 }
 #endif

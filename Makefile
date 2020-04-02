@@ -1,4 +1,4 @@
-LIBO_BASENAMES = osc_match  osc_bundle_s osc_bundle_u osc_bundle_iterator_s osc_bundle_iterator_u osc_error osc_mem osc_message_s osc_message_u osc_message_iterator_s osc_message_iterator_u osc_atom_s osc_atom_u osc_array osc_atom_array_s osc_atom_array_u osc_expr osc_vtable osc_dispatch osc_hashtab osc_linkedlist osc_util osc_rset osc_query osc_strfmt osc_expr_rec osc_typetag contrib/strptime osc_timetag osc_serial
+LIBO_BASENAMES = osc_match  osc_bundle_s osc_bundle_u osc_bundle_iterator_s osc_bundle_iterator_u osc_error osc_mem osc_message_s osc_message_u osc_message_iterator_s osc_message_iterator_u osc_atom_s osc_atom_u osc_array osc_atom_array_s osc_atom_array_u osc_expr osc_vtable osc_dispatch osc_hashtab osc_linkedlist osc_util osc_rset osc_query osc_strfmt osc_expr_rec osc_typetag contrib/strptime osc_timetag osc_serial osc_expr_symtab
 
 LIBO_CFILES = $(foreach F, $(LIBO_BASENAMES), $(F).c)
 LIBO_HFILES = $(foreach F, $(LIBO_BASENAMES), $(F).h) osc.h
@@ -132,6 +132,9 @@ libo.dylib: $(LIBO_OBJECTS)
 %_parser.c: %_parser.y
 	bison -p $(basename $@)_ -d -v --report=itemset -o $(basename $@).c $(basename $@).y
 
+osc_expr_symtab.c: osc_expr_symtab.gperf
+	gperf osc_expr_symtab.gperf > osc_expr_symtab.c
+
 .PHONY: doc
 doc:
 	cd doc && doxygen Doxyfile
@@ -145,7 +148,7 @@ test-clean:
 
 .PHONY: clean
 clean:
-	rm -f *.o libo.a libo.dylib test/osc_test *~ $(LIBO_PARSER_CFILES) $(LIBO_PARSER_HFILES) $(LIBO_SCANNER_CFILES) $(LIBO_SCANNER_HFILES) *.output
+	rm -f *.o libo.a libo.dylib test/osc_test *~ $(LIBO_PARSER_CFILES) $(LIBO_PARSER_HFILES) $(LIBO_SCANNER_CFILES) $(LIBO_SCANNER_HFILES) *.output osc_expr_symtab.c
 	cd doc && rm -rf html latex man
 	cd test && $(MAKE) clean
 	cd contrib && rm -rf *.o
