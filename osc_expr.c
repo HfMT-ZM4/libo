@@ -5393,6 +5393,35 @@ int osc_expr_join(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar
 	return 0;
 }
 
+int osc_expr_print(t_osc_expr *f,
+		   int argc,
+		   t_osc_atom_ar_u **argv,
+		   t_osc_atom_ar_u **out,
+		   void *context)
+{
+	void (*printfn)(void *c, char *s) = osc_expr_rec_getExtra(osc_expr_getRec(f));
+	if(argc > 0 && printfn){
+		*out = osc_atom_array_u_alloc(argc);
+		for(int i = 0; i < argc; i++){
+			t_osc_atom_u *a = osc_atom_array_u_get(argv[i], 0);
+			if(osc_atom_u_getTypetag(a) != 's'){
+				osc_error_handler(context,
+						  NULL,
+						  NULL,
+						  osc_expr_getLineno(f),
+						  OSC_ERR_EXPR_EVAL,
+						  "print(): arg %d must be a string",
+						  i);
+			}
+			printfn(context, osc_atom_u_getStringPtr(a));
+			t_osc_atom_u *aa = osc_atom_array_u_get(*out, i);
+			osc_atom_u_copyInto(&aa, a);
+		}
+	}else{
+	}
+	return 0;
+}
+
 int osc_expr_bitand(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void* context)
 {
 	if(argc != 2){

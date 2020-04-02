@@ -126,9 +126,9 @@ void osc_atom_u_clear(t_osc_atom_u *a)
 		osc_bundle_u_free(a->w.bndl);
 		a->w.bndl = NULL;
 	}else if(a->alloc && a->typetag == 'b' && a->w.b){
-        osc_bundle_u_free(a->w.b);
-        a->w.b = NULL;
-    }
+        	osc_mem_free(a->w.b);
+        	a->w.b = NULL;
+    	}
 	a->alloc = 0;
 }
 
@@ -745,6 +745,8 @@ int osc_atom_u_getStringLen(t_osc_atom_u *a)
 		return osc_strfmt_timetag(NULL, 0, a->w.t);
 	case 'b': // blob
 		return osc_strfmt_blob(NULL, 0, a->w.b);
+	case OSC_BUNDLE_TYPETAG:
+		return osc_bundle_u_nformatNestedBndl(NULL, 0, a->w.bndl, 1);
 	}
 	return 0;
 }
@@ -811,6 +813,9 @@ int osc_atom_u_getString(t_osc_atom_u *a, size_t n, char **out)
 		break;
 	case 'b': // blob
 		stringlen = osc_strfmt_blob(*out, nn, a->w.b);
+		break;
+	case OSC_BUNDLE_TYPETAG:
+		stringlen = osc_bundle_u_nformatNestedBndl(*out, nn, a->w.bndl, 1);
 		break;
 	}
 	return stringlen;

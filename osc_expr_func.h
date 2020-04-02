@@ -195,6 +195,8 @@ int osc_expr_floattotime(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_
 int osc_expr_match(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void *context);
 int osc_expr_quickhull(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void *context);
 
+int osc_expr_print(t_osc_expr *f, int argc, t_osc_atom_ar_u **argv, t_osc_atom_ar_u **out, void *context);
+
 static struct _osc_expr_rec osc_expr_funcsym[] __attribute__((unused)) = {
 	// infix
 	{"+",
@@ -2701,6 +2703,18 @@ static struct _osc_expr_rec osc_expr_funcsym[] __attribute__((unused)) = {
 	 (char *[]){"", NULL},
 	 "makes a bundle from a list of bindings",
 	 osc_expr_bundle,
+	 NULL},
+	{"print",
+	 "",
+	 0,
+	 -1,
+	 (char *[]){NULL},
+	 (int []){},
+	 (char *[]){NULL},
+	 (int []){},
+	 (char *[]){"", NULL},
+	 "print to a user-defined console",
+	 osc_expr_print,
 	 NULL},
 };
 
