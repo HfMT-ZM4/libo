@@ -515,8 +515,10 @@ static struct _osc_expr_rec osc_expr_funcsym[] __attribute__((unused)) = {
 	 NULL,
 	 NULL},
 	//////////////////////////////////////////////////
-	{OSC_SUBBUNDLE_ACCESSOR_OPERATOR_STRING,
-	 "/bundle"OSC_SUBBUNDLE_ACCESSOR_OPERATOR_STRING"/member",
+	//{OSC_SUBBUNDLE_ACCESSOR_OPERATOR_STRING,
+	//"/bundle"OSC_SUBBUNDLE_ACCESSOR_OPERATOR_STRING"/member",
+	{".",
+	 "/bundle./member",
 	 2,
 	 0,
 	 (char *[]){"The address of a message containing a nested bundle", "The address of the message to extract from the nested bundle."},
